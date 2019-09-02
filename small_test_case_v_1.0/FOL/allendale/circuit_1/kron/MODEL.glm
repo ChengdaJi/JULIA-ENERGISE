@@ -1,0 +1,2844 @@
+clock { timezone  EST+5EDT; starttime '2016-02-01 00:00:00'; stoptime '2016-02-08 00:00:00'; }
+#set relax_naming_rules=1;
+#set iteration_limit=9;
+module powerflow { solver_method NR; }
+module tape;
+
+object node:1 {
+name             node_1;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:101 {
+name            load_1;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_1_A.csv; property constant_power_A; };
+object player { file ./players/load_1_B.csv; property constant_power_B; };
+object player { file ./players/load_1_C.csv; property constant_power_C; };
+}
+
+object overhead_line:201 {
+name          overhead_line_1;
+from          node:1;
+to            load:101;
+phases        ABC;
+configuration line_configuration:501;
+length        1.0;
+}
+
+object line_configuration:501 {
+	name line_configuration_1;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:2 {
+name             node_2;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:102 {
+name            load_2;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_2_A.csv; property constant_power_A; };
+object player { file ./players/load_2_B.csv; property constant_power_B; };
+object player { file ./players/load_2_C.csv; property constant_power_C; };
+}
+
+object overhead_line:202 {
+name          overhead_line_2;
+from          node:2;
+to            load:102;
+phases        ABC;
+configuration line_configuration:502;
+length        1.0;
+}
+
+object line_configuration:502 {
+	name line_configuration_2;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:3 {
+name             node_3;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:103 {
+name            load_3;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_3_A.csv; property constant_power_A; };
+object player { file ./players/load_3_B.csv; property constant_power_B; };
+object player { file ./players/load_3_C.csv; property constant_power_C; };
+}
+
+object overhead_line:203 {
+name          overhead_line_3;
+from          node:3;
+to            load:103;
+phases        ABC;
+configuration line_configuration:503;
+length        1.0;
+}
+
+object line_configuration:503 {
+	name line_configuration_3;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:4 {
+name             node_4;
+phases           C;
+nominal_voltage  7621.0;
+}
+
+object load:104 {
+name            load_4;
+phases          C;
+nominal_voltage 7621.0;
+object player { file ./players/load_4_C.csv; property constant_power_C; };
+}
+
+object overhead_line:204 {
+name          overhead_line_4;
+from          node:4;
+to            load:104;
+phases        C;
+configuration line_configuration:504;
+length        1.0;
+}
+
+object line_configuration:504 {
+	name line_configuration_4;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:5 {
+name             node_5;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:105 {
+name            load_5;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_5_A.csv; property constant_power_A; };
+object player { file ./players/load_5_B.csv; property constant_power_B; };
+object player { file ./players/load_5_C.csv; property constant_power_C; };
+}
+
+object overhead_line:205 {
+name          overhead_line_5;
+from          node:5;
+to            load:105;
+phases        ABC;
+configuration line_configuration:505;
+length        1.0;
+}
+
+object line_configuration:505 {
+	name line_configuration_5;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:6 {
+name             node_6;
+phases           B;
+nominal_voltage  7621.0;
+}
+
+object load:106 {
+name            load_6;
+phases          B;
+nominal_voltage 7621.0;
+object player { file ./players/load_6_B.csv; property constant_power_B; };
+}
+
+object overhead_line:206 {
+name          overhead_line_6;
+from          node:6;
+to            load:106;
+phases        B;
+configuration line_configuration:506;
+length        1.0;
+}
+
+object line_configuration:506 {
+	name line_configuration_6;
+	z22  5.280e-03+5.280e-03j;
+}
+
+object node:7 {
+name             node_7;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:107 {
+name            load_7;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_7_A.csv; property constant_power_A; };
+object player { file ./players/load_7_B.csv; property constant_power_B; };
+object player { file ./players/load_7_C.csv; property constant_power_C; };
+}
+
+object overhead_line:207 {
+name          overhead_line_7;
+from          node:7;
+to            load:107;
+phases        ABC;
+configuration line_configuration:507;
+length        1.0;
+}
+
+object line_configuration:507 {
+	name line_configuration_7;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:8 {
+name             node_8;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:108 {
+name            load_8;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_8_A.csv; property constant_power_A; };
+object player { file ./players/load_8_B.csv; property constant_power_B; };
+object player { file ./players/load_8_C.csv; property constant_power_C; };
+}
+
+object overhead_line:208 {
+name          overhead_line_8;
+from          node:8;
+to            load:108;
+phases        ABC;
+configuration line_configuration:508;
+length        1.0;
+}
+
+object line_configuration:508 {
+	name line_configuration_8;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:9 {
+name             node_9;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:109 {
+name            load_9;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_9_A.csv; property constant_power_A; };
+object player { file ./players/load_9_B.csv; property constant_power_B; };
+object player { file ./players/load_9_C.csv; property constant_power_C; };
+}
+
+object overhead_line:209 {
+name          overhead_line_9;
+from          node:9;
+to            load:109;
+phases        ABC;
+configuration line_configuration:509;
+length        1.0;
+}
+
+object line_configuration:509 {
+	name line_configuration_9;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:10 {
+name             node_10;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:110 {
+name            load_10;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_10_A.csv; property constant_power_A; };
+object player { file ./players/load_10_B.csv; property constant_power_B; };
+object player { file ./players/load_10_C.csv; property constant_power_C; };
+}
+
+object overhead_line:210 {
+name          overhead_line_10;
+from          node:10;
+to            load:110;
+phases        ABC;
+configuration line_configuration:510;
+length        1.0;
+}
+
+object line_configuration:510 {
+	name line_configuration_10;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:11 {
+name             node_11;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:111 {
+name            load_11;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_11_A.csv; property constant_power_A; };
+object player { file ./players/load_11_B.csv; property constant_power_B; };
+object player { file ./players/load_11_C.csv; property constant_power_C; };
+}
+
+object overhead_line:211 {
+name          overhead_line_11;
+from          node:11;
+to            load:111;
+phases        ABC;
+configuration line_configuration:511;
+length        1.0;
+}
+
+object line_configuration:511 {
+	name line_configuration_11;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:12 {
+name             node_12;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:112 {
+name            load_12;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_12_A.csv; property constant_power_A; };
+object player { file ./players/load_12_B.csv; property constant_power_B; };
+object player { file ./players/load_12_C.csv; property constant_power_C; };
+}
+
+object overhead_line:212 {
+name          overhead_line_12;
+from          node:12;
+to            load:112;
+phases        ABC;
+configuration line_configuration:512;
+length        1.0;
+}
+
+object line_configuration:512 {
+	name line_configuration_12;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:13 {
+name             node_13;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:113 {
+name            load_13;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_13_A.csv; property constant_power_A; };
+object player { file ./players/load_13_B.csv; property constant_power_B; };
+object player { file ./players/load_13_C.csv; property constant_power_C; };
+}
+
+object overhead_line:213 {
+name          overhead_line_13;
+from          node:13;
+to            load:113;
+phases        ABC;
+configuration line_configuration:513;
+length        1.0;
+}
+
+object line_configuration:513 {
+	name line_configuration_13;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:14 {
+name             node_14;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:114 {
+name            load_14;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_14_A.csv; property constant_power_A; };
+object player { file ./players/load_14_B.csv; property constant_power_B; };
+object player { file ./players/load_14_C.csv; property constant_power_C; };
+}
+
+object overhead_line:214 {
+name          overhead_line_14;
+from          node:14;
+to            load:114;
+phases        ABC;
+configuration line_configuration:514;
+length        1.0;
+}
+
+object line_configuration:514 {
+	name line_configuration_14;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:15 {
+name             node_15;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:115 {
+name            load_15;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_15_A.csv; property constant_power_A; };
+object player { file ./players/load_15_B.csv; property constant_power_B; };
+object player { file ./players/load_15_C.csv; property constant_power_C; };
+}
+
+object overhead_line:215 {
+name          overhead_line_15;
+from          node:15;
+to            load:115;
+phases        ABC;
+configuration line_configuration:515;
+length        1.0;
+}
+
+object line_configuration:515 {
+	name line_configuration_15;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:16 {
+name             node_16;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:116 {
+name            load_16;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_16_A.csv; property constant_power_A; };
+object player { file ./players/load_16_B.csv; property constant_power_B; };
+object player { file ./players/load_16_C.csv; property constant_power_C; };
+}
+
+object overhead_line:216 {
+name          overhead_line_16;
+from          node:16;
+to            load:116;
+phases        ABC;
+configuration line_configuration:516;
+length        1.0;
+}
+
+object line_configuration:516 {
+	name line_configuration_16;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:17 {
+name             node_17;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:117 {
+name            load_17;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_17_A.csv; property constant_power_A; };
+object player { file ./players/load_17_B.csv; property constant_power_B; };
+object player { file ./players/load_17_C.csv; property constant_power_C; };
+}
+
+object overhead_line:217 {
+name          overhead_line_17;
+from          node:17;
+to            load:117;
+phases        ABC;
+configuration line_configuration:517;
+length        1.0;
+}
+
+object line_configuration:517 {
+	name line_configuration_17;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:18 {
+name             node_18;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:118 {
+name            load_18;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_18_A.csv; property constant_power_A; };
+object player { file ./players/load_18_B.csv; property constant_power_B; };
+object player { file ./players/load_18_C.csv; property constant_power_C; };
+}
+
+object overhead_line:218 {
+name          overhead_line_18;
+from          node:18;
+to            load:118;
+phases        ABC;
+configuration line_configuration:518;
+length        1.0;
+}
+
+object line_configuration:518 {
+	name line_configuration_18;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:19 {
+name             node_19;
+phases           C;
+nominal_voltage  7621.0;
+}
+
+object load:119 {
+name            load_19;
+phases          C;
+nominal_voltage 7621.0;
+object player { file ./players/load_19_C.csv; property constant_power_C; };
+}
+
+object overhead_line:219 {
+name          overhead_line_19;
+from          node:19;
+to            load:119;
+phases        C;
+configuration line_configuration:519;
+length        1.0;
+}
+
+object line_configuration:519 {
+	name line_configuration_19;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:20 {
+name             node_20;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:120 {
+name            load_20;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_20_A.csv; property constant_power_A; };
+object player { file ./players/load_20_B.csv; property constant_power_B; };
+object player { file ./players/load_20_C.csv; property constant_power_C; };
+}
+
+object overhead_line:220 {
+name          overhead_line_20;
+from          node:20;
+to            load:120;
+phases        ABC;
+configuration line_configuration:520;
+length        1.0;
+}
+
+object line_configuration:520 {
+	name line_configuration_20;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:21 {
+name             node_21;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:121 {
+name            load_21;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_21_A.csv; property constant_power_A; };
+object player { file ./players/load_21_B.csv; property constant_power_B; };
+object player { file ./players/load_21_C.csv; property constant_power_C; };
+}
+
+object overhead_line:221 {
+name          overhead_line_21;
+from          node:21;
+to            load:121;
+phases        ABC;
+configuration line_configuration:521;
+length        1.0;
+}
+
+object line_configuration:521 {
+	name line_configuration_21;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:22 {
+name             node_22;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:122 {
+name            load_22;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_22_A.csv; property constant_power_A; };
+object player { file ./players/load_22_B.csv; property constant_power_B; };
+object player { file ./players/load_22_C.csv; property constant_power_C; };
+}
+
+object overhead_line:222 {
+name          overhead_line_22;
+from          node:22;
+to            load:122;
+phases        ABC;
+configuration line_configuration:522;
+length        1.0;
+}
+
+object line_configuration:522 {
+	name line_configuration_22;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:23 {
+name             node_23;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:123 {
+name            load_23;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_23_A.csv; property constant_power_A; };
+object player { file ./players/load_23_B.csv; property constant_power_B; };
+object player { file ./players/load_23_C.csv; property constant_power_C; };
+}
+
+object overhead_line:223 {
+name          overhead_line_23;
+from          node:23;
+to            load:123;
+phases        ABC;
+configuration line_configuration:523;
+length        1.0;
+}
+
+object line_configuration:523 {
+	name line_configuration_23;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:24 {
+name             node_24;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:124 {
+name            load_24;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_24_A.csv; property constant_power_A; };
+object player { file ./players/load_24_B.csv; property constant_power_B; };
+object player { file ./players/load_24_C.csv; property constant_power_C; };
+}
+
+object overhead_line:224 {
+name          overhead_line_24;
+from          node:24;
+to            load:124;
+phases        ABC;
+configuration line_configuration:524;
+length        1.0;
+}
+
+object line_configuration:524 {
+	name line_configuration_24;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:25 {
+name             node_25;
+phases           B;
+nominal_voltage  7621.0;
+}
+
+object load:125 {
+name            load_25;
+phases          B;
+nominal_voltage 7621.0;
+object player { file ./players/load_25_B.csv; property constant_power_B; };
+}
+
+object overhead_line:225 {
+name          overhead_line_25;
+from          node:25;
+to            load:125;
+phases        B;
+configuration line_configuration:525;
+length        1.0;
+}
+
+object line_configuration:525 {
+	name line_configuration_25;
+	z22  5.280e-03+5.280e-03j;
+}
+
+object node:26 {
+name             node_26;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:126 {
+name            load_26;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_26_A.csv; property constant_power_A; };
+object player { file ./players/load_26_B.csv; property constant_power_B; };
+object player { file ./players/load_26_C.csv; property constant_power_C; };
+}
+
+object overhead_line:226 {
+name          overhead_line_26;
+from          node:26;
+to            load:126;
+phases        ABC;
+configuration line_configuration:526;
+length        1.0;
+}
+
+object line_configuration:526 {
+	name line_configuration_26;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:27 {
+name             node_27;
+phases           B;
+nominal_voltage  7621.0;
+}
+
+object load:127 {
+name            load_27;
+phases          B;
+nominal_voltage 7621.0;
+object player { file ./players/load_27_B.csv; property constant_power_B; };
+}
+
+object overhead_line:227 {
+name          overhead_line_27;
+from          node:27;
+to            load:127;
+phases        B;
+configuration line_configuration:527;
+length        1.0;
+}
+
+object line_configuration:527 {
+	name line_configuration_27;
+	z22  5.280e-03+5.280e-03j;
+}
+
+object node:28 {
+name             node_28;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:128 {
+name            load_28;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_28_A.csv; property constant_power_A; };
+object player { file ./players/load_28_B.csv; property constant_power_B; };
+object player { file ./players/load_28_C.csv; property constant_power_C; };
+}
+
+object overhead_line:228 {
+name          overhead_line_28;
+from          node:28;
+to            load:128;
+phases        ABC;
+configuration line_configuration:528;
+length        1.0;
+}
+
+object line_configuration:528 {
+	name line_configuration_28;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:29 {
+name             node_29;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:129 {
+name            load_29;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_29_A.csv; property constant_power_A; };
+object player { file ./players/load_29_B.csv; property constant_power_B; };
+object player { file ./players/load_29_C.csv; property constant_power_C; };
+}
+
+object overhead_line:229 {
+name          overhead_line_29;
+from          node:29;
+to            load:129;
+phases        ABC;
+configuration line_configuration:529;
+length        1.0;
+}
+
+object line_configuration:529 {
+	name line_configuration_29;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:30 {
+name             node_30;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:130 {
+name            load_30;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_30_A.csv; property constant_power_A; };
+object player { file ./players/load_30_B.csv; property constant_power_B; };
+object player { file ./players/load_30_C.csv; property constant_power_C; };
+}
+
+object overhead_line:230 {
+name          overhead_line_30;
+from          node:30;
+to            load:130;
+phases        ABC;
+configuration line_configuration:530;
+length        1.0;
+}
+
+object line_configuration:530 {
+	name line_configuration_30;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:31 {
+name             node_31;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:131 {
+name            load_31;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_31_A.csv; property constant_power_A; };
+object player { file ./players/load_31_B.csv; property constant_power_B; };
+object player { file ./players/load_31_C.csv; property constant_power_C; };
+}
+
+object overhead_line:231 {
+name          overhead_line_31;
+from          node:31;
+to            load:131;
+phases        ABC;
+configuration line_configuration:531;
+length        1.0;
+}
+
+object line_configuration:531 {
+	name line_configuration_31;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:32 {
+name             node_32;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:132 {
+name            load_32;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_32_A.csv; property constant_power_A; };
+object player { file ./players/load_32_B.csv; property constant_power_B; };
+object player { file ./players/load_32_C.csv; property constant_power_C; };
+}
+
+object overhead_line:232 {
+name          overhead_line_32;
+from          node:32;
+to            load:132;
+phases        ABC;
+configuration line_configuration:532;
+length        1.0;
+}
+
+object line_configuration:532 {
+	name line_configuration_32;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:33 {
+name             node_33;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:133 {
+name            load_33;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_33_A.csv; property constant_power_A; };
+object player { file ./players/load_33_B.csv; property constant_power_B; };
+object player { file ./players/load_33_C.csv; property constant_power_C; };
+}
+
+object overhead_line:233 {
+name          overhead_line_33;
+from          node:33;
+to            load:133;
+phases        ABC;
+configuration line_configuration:533;
+length        1.0;
+}
+
+object line_configuration:533 {
+	name line_configuration_33;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:34 {
+name             node_34;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:134 {
+name            load_34;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_34_A.csv; property constant_power_A; };
+object player { file ./players/load_34_B.csv; property constant_power_B; };
+object player { file ./players/load_34_C.csv; property constant_power_C; };
+}
+
+object overhead_line:234 {
+name          overhead_line_34;
+from          node:34;
+to            load:134;
+phases        ABC;
+configuration line_configuration:534;
+length        1.0;
+}
+
+object line_configuration:534 {
+	name line_configuration_34;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:35 {
+name             node_35;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:135 {
+name            load_35;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_35_A.csv; property constant_power_A; };
+object player { file ./players/load_35_B.csv; property constant_power_B; };
+object player { file ./players/load_35_C.csv; property constant_power_C; };
+}
+
+object overhead_line:235 {
+name          overhead_line_35;
+from          node:35;
+to            load:135;
+phases        ABC;
+configuration line_configuration:535;
+length        1.0;
+}
+
+object line_configuration:535 {
+	name line_configuration_35;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:36 {
+name             node_36;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:136 {
+name            load_36;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_36_A.csv; property constant_power_A; };
+object player { file ./players/load_36_B.csv; property constant_power_B; };
+object player { file ./players/load_36_C.csv; property constant_power_C; };
+}
+
+object overhead_line:236 {
+name          overhead_line_36;
+from          node:36;
+to            load:136;
+phases        ABC;
+configuration line_configuration:536;
+length        1.0;
+}
+
+object line_configuration:536 {
+	name line_configuration_36;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:37 {
+name             node_37;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:137 {
+name            load_37;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_37_A.csv; property constant_power_A; };
+object player { file ./players/load_37_B.csv; property constant_power_B; };
+object player { file ./players/load_37_C.csv; property constant_power_C; };
+}
+
+object overhead_line:237 {
+name          overhead_line_37;
+from          node:37;
+to            load:137;
+phases        ABC;
+configuration line_configuration:537;
+length        1.0;
+}
+
+object line_configuration:537 {
+	name line_configuration_37;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:38 {
+name             node_38;
+phases           C;
+nominal_voltage  7621.0;
+}
+
+object load:138 {
+name            load_38;
+phases          C;
+nominal_voltage 7621.0;
+object player { file ./players/load_38_C.csv; property constant_power_C; };
+}
+
+object overhead_line:238 {
+name          overhead_line_38;
+from          node:38;
+to            load:138;
+phases        C;
+configuration line_configuration:538;
+length        1.0;
+}
+
+object line_configuration:538 {
+	name line_configuration_38;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:39 {
+name             node_39;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:139 {
+name            load_39;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_39_A.csv; property constant_power_A; };
+object player { file ./players/load_39_B.csv; property constant_power_B; };
+object player { file ./players/load_39_C.csv; property constant_power_C; };
+}
+
+object overhead_line:239 {
+name          overhead_line_39;
+from          node:39;
+to            load:139;
+phases        ABC;
+configuration line_configuration:539;
+length        1.0;
+}
+
+object line_configuration:539 {
+	name line_configuration_39;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:40 {
+name             node_40;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:140 {
+name            load_40;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_40_A.csv; property constant_power_A; };
+object player { file ./players/load_40_B.csv; property constant_power_B; };
+object player { file ./players/load_40_C.csv; property constant_power_C; };
+}
+
+object overhead_line:240 {
+name          overhead_line_40;
+from          node:40;
+to            load:140;
+phases        ABC;
+configuration line_configuration:540;
+length        1.0;
+}
+
+object line_configuration:540 {
+	name line_configuration_40;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:41 {
+name             node_41;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:141 {
+name            load_41;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_41_A.csv; property constant_power_A; };
+object player { file ./players/load_41_B.csv; property constant_power_B; };
+object player { file ./players/load_41_C.csv; property constant_power_C; };
+}
+
+object overhead_line:241 {
+name          overhead_line_41;
+from          node:41;
+to            load:141;
+phases        ABC;
+configuration line_configuration:541;
+length        1.0;
+}
+
+object line_configuration:541 {
+	name line_configuration_41;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:42 {
+name             node_42;
+phases           B;
+nominal_voltage  7621.0;
+}
+
+object load:142 {
+name            load_42;
+phases          B;
+nominal_voltage 7621.0;
+object player { file ./players/load_42_B.csv; property constant_power_B; };
+}
+
+object overhead_line:242 {
+name          overhead_line_42;
+from          node:42;
+to            load:142;
+phases        B;
+configuration line_configuration:542;
+length        1.0;
+}
+
+object line_configuration:542 {
+	name line_configuration_42;
+	z22  5.280e-03+5.280e-03j;
+}
+
+object node:43 {
+name             node_43;
+phases           B;
+nominal_voltage  7621.0;
+}
+
+object load:143 {
+name            load_43;
+phases          B;
+nominal_voltage 7621.0;
+object player { file ./players/load_43_B.csv; property constant_power_B; };
+}
+
+object overhead_line:243 {
+name          overhead_line_43;
+from          node:43;
+to            load:143;
+phases        B;
+configuration line_configuration:543;
+length        1.0;
+}
+
+object line_configuration:543 {
+	name line_configuration_43;
+	z22  5.280e-03+5.280e-03j;
+}
+
+object node:44 {
+name             node_44;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:144 {
+name            load_44;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_44_A.csv; property constant_power_A; };
+object player { file ./players/load_44_B.csv; property constant_power_B; };
+object player { file ./players/load_44_C.csv; property constant_power_C; };
+}
+
+object overhead_line:244 {
+name          overhead_line_44;
+from          node:44;
+to            load:144;
+phases        ABC;
+configuration line_configuration:544;
+length        1.0;
+}
+
+object line_configuration:544 {
+	name line_configuration_44;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:45 {
+name             node_45;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:145 {
+name            load_45;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_45_A.csv; property constant_power_A; };
+object player { file ./players/load_45_B.csv; property constant_power_B; };
+object player { file ./players/load_45_C.csv; property constant_power_C; };
+}
+
+object overhead_line:245 {
+name          overhead_line_45;
+from          node:45;
+to            load:145;
+phases        ABC;
+configuration line_configuration:545;
+length        1.0;
+}
+
+object line_configuration:545 {
+	name line_configuration_45;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:46 {
+name             node_46;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:146 {
+name            load_46;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_46_A.csv; property constant_power_A; };
+object player { file ./players/load_46_B.csv; property constant_power_B; };
+object player { file ./players/load_46_C.csv; property constant_power_C; };
+}
+
+object overhead_line:246 {
+name          overhead_line_46;
+from          node:46;
+to            load:146;
+phases        ABC;
+configuration line_configuration:546;
+length        1.0;
+}
+
+object line_configuration:546 {
+	name line_configuration_46;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:47 {
+name             node_47;
+phases           C;
+nominal_voltage  7621.0;
+}
+
+object load:147 {
+name            load_47;
+phases          C;
+nominal_voltage 7621.0;
+object player { file ./players/load_47_C.csv; property constant_power_C; };
+}
+
+object overhead_line:247 {
+name          overhead_line_47;
+from          node:47;
+to            load:147;
+phases        C;
+configuration line_configuration:547;
+length        1.0;
+}
+
+object line_configuration:547 {
+	name line_configuration_47;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:48 {
+name             node_48;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:148 {
+name            load_48;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_48_A.csv; property constant_power_A; };
+object player { file ./players/load_48_B.csv; property constant_power_B; };
+object player { file ./players/load_48_C.csv; property constant_power_C; };
+}
+
+object overhead_line:248 {
+name          overhead_line_48;
+from          node:48;
+to            load:148;
+phases        ABC;
+configuration line_configuration:548;
+length        1.0;
+}
+
+object line_configuration:548 {
+	name line_configuration_48;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:49 {
+name             node_49;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:149 {
+name            load_49;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_49_A.csv; property constant_power_A; };
+object player { file ./players/load_49_B.csv; property constant_power_B; };
+object player { file ./players/load_49_C.csv; property constant_power_C; };
+}
+
+object overhead_line:249 {
+name          overhead_line_49;
+from          node:49;
+to            load:149;
+phases        ABC;
+configuration line_configuration:549;
+length        1.0;
+}
+
+object line_configuration:549 {
+	name line_configuration_49;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:50 {
+name             node_50;
+phases           ABC;
+nominal_voltage  7621.0;
+}
+
+object load:150 {
+name            load_50;
+phases          ABC;
+nominal_voltage 7621.0;
+object player { file ./players/load_50_A.csv; property constant_power_A; };
+object player { file ./players/load_50_B.csv; property constant_power_B; };
+object player { file ./players/load_50_C.csv; property constant_power_C; };
+}
+
+object overhead_line:250 {
+name          overhead_line_50;
+from          node:50;
+to            load:150;
+phases        ABC;
+configuration line_configuration:550;
+length        1.0;
+}
+
+object line_configuration:550 {
+	name line_configuration_50;
+	z11  5.280e-03+5.280e-03j;
+	z12  1.742e-03+1.742e-03j;
+	z13  1.742e-03+1.742e-03j;
+	z21  1.742e-03+1.742e-03j;
+	z22  5.280e-03+5.280e-03j;
+	z23  1.742e-03+1.742e-03j;
+	z31  1.742e-03+1.742e-03j;
+	z32  1.742e-03+1.742e-03j;
+	z33  5.280e-03+5.280e-03j;
+}
+
+object node:51 {
+name             node_51;
+phases           ABC;
+nominal_voltage  7621.0;
+bustype          SWING;
+}
+
+object overhead_line:251 {
+name          overhead_line_51;
+from          node:3;
+to            node:1;
+phases        ABC;
+configuration line_configuration:551;
+length        1.0;
+}
+
+object line_configuration:551 {
+	name line_configuration_51;
+	z11  1.707e+00+4.643e+00j;
+	z12  7.098e-01+1.966e+00j;
+	z13  7.098e-01+1.966e+00j;
+	z21  7.098e-01+1.966e+00j;
+	z22  1.707e+00+4.643e+00j;
+	z23  7.098e-01+1.966e+00j;
+	z31  7.098e-01+1.966e+00j;
+	z32  7.098e-01+1.966e+00j;
+	z33  1.707e+00+4.643e+00j;
+}
+
+object overhead_line:252 {
+name          overhead_line_52;
+from          node:18;
+to            node:1;
+phases        ABC;
+configuration line_configuration:552;
+length        1.0;
+}
+
+object line_configuration:552 {
+	name line_configuration_52;
+	z11  1.643e+00+4.442e+00j;
+	z12  6.788e-01+1.862e+00j;
+	z13  6.788e-01+1.862e+00j;
+	z21  6.788e-01+1.862e+00j;
+	z22  1.643e+00+4.442e+00j;
+	z23  6.788e-01+1.862e+00j;
+	z31  6.788e-01+1.862e+00j;
+	z32  6.788e-01+1.862e+00j;
+	z33  1.643e+00+4.442e+00j;
+}
+
+object overhead_line:253 {
+name          overhead_line_53;
+from          node:3;
+to            node:2;
+phases        ABC;
+configuration line_configuration:553;
+length        1.0;
+}
+
+object line_configuration:553 {
+	name line_configuration_53;
+	z11  1.649e+00+4.424e+00j;
+	z12  6.962e-01+1.885e+00j;
+	z13  6.970e-01+1.888e+00j;
+	z21  6.962e-01+1.885e+00j;
+	z22  1.649e+00+4.424e+00j;
+	z23  6.970e-01+1.888e+00j;
+	z31  6.970e-01+1.888e+00j;
+	z32  6.970e-01+1.888e+00j;
+	z33  1.652e+00+4.432e+00j;
+}
+
+object overhead_line:255 {
+name          overhead_line_55;
+from          node:5;
+to            node:2;
+phases        ABC;
+configuration line_configuration:555;
+length        1.0;
+}
+
+object line_configuration:555 {
+	name line_configuration_55;
+	z11  3.001e+00+8.218e+00j;
+	z12  1.251e+00+3.418e+00j;
+	z13  1.251e+00+3.418e+00j;
+	z21  1.251e+00+3.418e+00j;
+	z22  3.001e+00+8.218e+00j;
+	z23  1.251e+00+3.418e+00j;
+	z31  1.251e+00+3.418e+00j;
+	z32  1.251e+00+3.418e+00j;
+	z33  3.001e+00+8.218e+00j;
+}
+
+object overhead_line:256 {
+name          overhead_line_56;
+from          node:3;
+to            node:4;
+phases        C;
+configuration line_configuration:556;
+length        1.0;
+}
+
+object line_configuration:556 {
+	name line_configuration_56;
+	z33  2.102e+02+5.098e+02j;
+}
+
+object overhead_line:257 {
+name          overhead_line_57;
+from          node:26;
+to            node:5;
+phases        ABC;
+configuration line_configuration:557;
+length        1.0;
+}
+
+object line_configuration:557 {
+	name line_configuration_57;
+	z11  1.534e+00+4.114e+00j;
+	z12  6.326e-01+1.739e+00j;
+	z13  6.326e-01+1.739e+00j;
+	z21  6.326e-01+1.739e+00j;
+	z22  1.534e+00+4.114e+00j;
+	z23  6.326e-01+1.739e+00j;
+	z31  6.326e-01+1.739e+00j;
+	z32  6.326e-01+1.739e+00j;
+	z33  1.534e+00+4.114e+00j;
+}
+
+object overhead_line:258 {
+name          overhead_line_58;
+from          node:10;
+to            node:6;
+phases        B;
+configuration line_configuration:558;
+length        1.0;
+}
+
+object line_configuration:558 {
+	name line_configuration_58;
+	z22  7.050e+01+1.041e+02j;
+}
+
+object overhead_line:259 {
+name          overhead_line_59;
+from          node:10;
+to            node:7;
+phases        ABC;
+configuration line_configuration:559;
+length        1.0;
+}
+
+object line_configuration:559 {
+	name line_configuration_59;
+	z11  2.850e+00+7.905e+00j;
+	z12  1.197e+00+3.326e+00j;
+	z13  1.197e+00+3.326e+00j;
+	z21  1.197e+00+3.326e+00j;
+	z22  2.850e+00+7.905e+00j;
+	z23  1.197e+00+3.326e+00j;
+	z31  1.197e+00+3.326e+00j;
+	z32  1.197e+00+3.326e+00j;
+	z33  2.850e+00+7.905e+00j;
+}
+
+object overhead_line:260 {
+name          overhead_line_60;
+from          node:49;
+to            node:7;
+phases        ABC;
+configuration line_configuration:560;
+length        1.0;
+}
+
+object line_configuration:560 {
+	name line_configuration_60;
+	z11  3.678e+00+9.977e+00j;
+	z12  1.537e+00+4.210e+00j;
+	z13  1.537e+00+4.210e+00j;
+	z21  1.537e+00+4.210e+00j;
+	z22  3.678e+00+9.977e+00j;
+	z23  1.537e+00+4.210e+00j;
+	z31  1.537e+00+4.210e+00j;
+	z32  1.537e+00+4.210e+00j;
+	z33  3.678e+00+9.977e+00j;
+}
+
+object overhead_line:262 {
+name          overhead_line_62;
+from          node:44;
+to            node:8;
+phases        ABC;
+configuration line_configuration:562;
+length        1.0;
+}
+
+object line_configuration:562 {
+	name line_configuration_62;
+	z11  7.364e+00+2.171e+01j;
+	z12  3.025e+00+8.960e+00j;
+	z13  3.025e+00+8.960e+00j;
+	z21  3.025e+00+8.960e+00j;
+	z22  7.364e+00+2.171e+01j;
+	z23  3.025e+00+8.960e+00j;
+	z31  3.025e+00+8.960e+00j;
+	z32  3.025e+00+8.960e+00j;
+	z33  7.364e+00+2.171e+01j;
+}
+
+object overhead_line:263 {
+name          overhead_line_63;
+from          node:10;
+to            node:9;
+phases        ABC;
+configuration line_configuration:563;
+length        1.0;
+}
+
+object line_configuration:563 {
+	name line_configuration_63;
+	z11  1.969e+00+5.422e+00j;
+	z12  8.426e-01+2.277e+00j;
+	z13  8.426e-01+2.277e+00j;
+	z21  8.426e-01+2.277e+00j;
+	z22  1.969e+00+5.422e+00j;
+	z23  8.426e-01+2.277e+00j;
+	z31  8.426e-01+2.277e+00j;
+	z32  8.426e-01+2.277e+00j;
+	z33  1.969e+00+5.422e+00j;
+}
+
+object overhead_line:264 {
+name          overhead_line_64;
+from          node:44;
+to            node:9;
+phases        ABC;
+configuration line_configuration:564;
+length        1.0;
+}
+
+object line_configuration:564 {
+	name line_configuration_64;
+	z11  2.909e+00+8.665e+00j;
+	z12  1.232e+00+3.505e+00j;
+	z13  1.232e+00+3.505e+00j;
+	z21  1.232e+00+3.505e+00j;
+	z22  2.909e+00+8.665e+00j;
+	z23  1.232e+00+3.505e+00j;
+	z31  1.232e+00+3.505e+00j;
+	z32  1.232e+00+3.505e+00j;
+	z33  2.909e+00+8.665e+00j;
+}
+
+object overhead_line:265 {
+name          overhead_line_65;
+from          node:13;
+to            node:11;
+phases        ABC;
+configuration line_configuration:565;
+length        1.0;
+}
+
+object line_configuration:565 {
+	name line_configuration_65;
+	z11  1.991e+00+5.575e+00j;
+	z12  8.400e-01+2.560e+00j;
+	z13  8.400e-01+2.560e+00j;
+	z21  8.400e-01+2.560e+00j;
+	z22  1.991e+00+5.575e+00j;
+	z23  8.400e-01+2.560e+00j;
+	z31  8.400e-01+2.560e+00j;
+	z32  8.400e-01+2.560e+00j;
+	z33  1.991e+00+5.575e+00j;
+}
+
+object overhead_line:266 {
+name          overhead_line_66;
+from          node:15;
+to            node:11;
+phases        ABC;
+configuration line_configuration:566;
+length        1.0;
+}
+
+object line_configuration:566 {
+	name line_configuration_66;
+	z11  2.818e+00+7.712e+00j;
+	z12  1.159e+00+3.537e+00j;
+	z13  1.159e+00+3.537e+00j;
+	z21  1.159e+00+3.537e+00j;
+	z22  2.818e+00+7.712e+00j;
+	z23  1.159e+00+3.537e+00j;
+	z31  1.159e+00+3.537e+00j;
+	z32  1.159e+00+3.537e+00j;
+	z33  2.818e+00+7.712e+00j;
+}
+
+object overhead_line:267 {
+name          overhead_line_67;
+from          node:14;
+to            node:12;
+phases        ABC;
+configuration line_configuration:567;
+length        1.0;
+}
+
+object line_configuration:567 {
+	name line_configuration_67;
+	z11  1.969e+00+5.468e+00j;
+	z12  8.265e-01+2.489e+00j;
+	z13  8.265e-01+2.489e+00j;
+	z21  8.265e-01+2.489e+00j;
+	z22  1.969e+00+5.468e+00j;
+	z23  8.265e-01+2.489e+00j;
+	z31  8.265e-01+2.489e+00j;
+	z32  8.265e-01+2.489e+00j;
+	z33  1.969e+00+5.468e+00j;
+}
+
+object overhead_line:268 {
+name          overhead_line_68;
+from          node:15;
+to            node:12;
+phases        ABC;
+configuration line_configuration:568;
+length        1.0;
+}
+
+object line_configuration:568 {
+	name line_configuration_68;
+	z11  7.011e+00+1.946e+01j;
+	z12  2.906e+00+8.783e+00j;
+	z13  2.906e+00+8.783e+00j;
+	z21  2.906e+00+8.783e+00j;
+	z22  7.011e+00+1.946e+01j;
+	z23  2.906e+00+8.783e+00j;
+	z31  2.906e+00+8.783e+00j;
+	z32  2.906e+00+8.783e+00j;
+	z33  7.011e+00+1.946e+01j;
+}
+
+object overhead_line:269 {
+name          overhead_line_69;
+from          node:22;
+to            node:12;
+phases        ABC;
+configuration line_configuration:569;
+length        1.0;
+}
+
+object line_configuration:569 {
+	name line_configuration_69;
+	z11  8.512e+00+2.364e+01j;
+	z12  3.542e+00+1.063e+01j;
+	z13  3.542e+00+1.063e+01j;
+	z21  3.542e+00+1.063e+01j;
+	z22  8.512e+00+2.364e+01j;
+	z23  3.542e+00+1.063e+01j;
+	z31  3.542e+00+1.063e+01j;
+	z32  3.542e+00+1.063e+01j;
+	z33  8.512e+00+2.364e+01j;
+}
+
+object overhead_line:270 {
+name          overhead_line_70;
+from          node:33;
+to            node:14;
+phases        ABC;
+configuration line_configuration:570;
+length        1.0;
+}
+
+object line_configuration:570 {
+	name line_configuration_70;
+	z11  2.727e+00+7.586e+00j;
+	z12  1.141e+00+3.483e+00j;
+	z13  1.141e+00+3.483e+00j;
+	z21  1.141e+00+3.483e+00j;
+	z22  2.727e+00+7.586e+00j;
+	z23  1.141e+00+3.483e+00j;
+	z31  1.141e+00+3.483e+00j;
+	z32  1.141e+00+3.483e+00j;
+	z33  2.727e+00+7.586e+00j;
+}
+
+object overhead_line:272 {
+name          overhead_line_72;
+from          node:20;
+to            node:16;
+phases        ABC;
+configuration line_configuration:572;
+length        1.0;
+}
+
+object line_configuration:572 {
+	name line_configuration_72;
+	z11  4.837e+00+1.231e+01j;
+	z12  1.679e+00+5.334e+00j;
+	z13  1.679e+00+5.334e+00j;
+	z21  1.679e+00+5.334e+00j;
+	z22  4.837e+00+1.231e+01j;
+	z23  1.679e+00+5.334e+00j;
+	z31  1.679e+00+5.334e+00j;
+	z32  1.679e+00+5.334e+00j;
+	z33  4.837e+00+1.231e+01j;
+}
+
+object overhead_line:273 {
+name          overhead_line_73;
+from          node:37;
+to            node:16;
+phases        ABC;
+configuration line_configuration:573;
+length        1.0;
+}
+
+object line_configuration:573 {
+	name line_configuration_73;
+	z11  4.839e+00+9.070e+00j;
+	z12  1.337e+00+3.741e+00j;
+	z13  1.337e+00+3.741e+00j;
+	z21  1.337e+00+3.741e+00j;
+	z22  4.839e+00+9.070e+00j;
+	z23  1.337e+00+3.741e+00j;
+	z31  1.337e+00+3.741e+00j;
+	z32  1.337e+00+3.741e+00j;
+	z33  4.839e+00+9.070e+00j;
+}
+
+object overhead_line:275 {
+name          overhead_line_75;
+from          node:17;
+to            node:19;
+phases        C;
+configuration line_configuration:575;
+length        1.0;
+}
+
+object line_configuration:575 {
+	name line_configuration_75;
+	z33  3.049e+01+7.362e+01j;
+}
+
+object overhead_line:276 {
+name          overhead_line_76;
+from          node:20;
+to            node:17;
+phases        ABC;
+configuration line_configuration:576;
+length        1.0;
+}
+
+object line_configuration:576 {
+	name line_configuration_76;
+	z11  4.035e+00+6.024e+00j;
+	z12  8.749e-01+2.345e+00j;
+	z13  8.749e-01+2.345e+00j;
+	z21  8.749e-01+2.345e+00j;
+	z22  4.035e+00+6.024e+00j;
+	z23  8.749e-01+2.345e+00j;
+	z31  8.749e-01+2.345e+00j;
+	z32  8.749e-01+2.345e+00j;
+	z33  4.035e+00+6.024e+00j;
+}
+
+object overhead_line:277 {
+name          overhead_line_77;
+from          node:20;
+to            node:18;
+phases        ABC;
+configuration line_configuration:577;
+length        1.0;
+}
+
+object line_configuration:577 {
+	name line_configuration_77;
+	z11  4.135e+00+1.131e+01j;
+	z12  1.803e+00+4.812e+00j;
+	z13  1.803e+00+4.812e+00j;
+	z21  1.803e+00+4.812e+00j;
+	z22  4.135e+00+1.131e+01j;
+	z23  1.803e+00+4.812e+00j;
+	z31  1.803e+00+4.812e+00j;
+	z32  1.803e+00+4.812e+00j;
+	z33  4.135e+00+1.131e+01j;
+}
+
+object overhead_line:278 {
+name          overhead_line_78;
+from          node:41;
+to            node:20;
+phases        ABC;
+configuration line_configuration:578;
+length        1.0;
+}
+
+object line_configuration:578 {
+	name line_configuration_78;
+	z11  6.053e+00+1.386e+01j;
+	z12  2.031e+00+6.172e+00j;
+	z13  2.031e+00+6.172e+00j;
+	z21  2.031e+00+6.172e+00j;
+	z22  6.053e+00+1.386e+01j;
+	z23  2.031e+00+6.172e+00j;
+	z31  2.031e+00+6.172e+00j;
+	z32  2.031e+00+6.172e+00j;
+	z33  6.053e+00+1.386e+01j;
+}
+
+object overhead_line:279 {
+name          overhead_line_79;
+from          node:23;
+to            node:21;
+phases        ABC;
+configuration line_configuration:579;
+length        1.0;
+}
+
+object line_configuration:579 {
+	name line_configuration_79;
+	z11  2.797e+00+7.735e+00j;
+	z12  1.188e+00+3.280e+00j;
+	z13  1.188e+00+3.280e+00j;
+	z21  1.188e+00+3.280e+00j;
+	z22  2.797e+00+7.735e+00j;
+	z23  1.188e+00+3.280e+00j;
+	z31  1.188e+00+3.280e+00j;
+	z32  1.188e+00+3.280e+00j;
+	z33  2.797e+00+7.735e+00j;
+}
+
+object overhead_line:280 {
+name          overhead_line_80;
+from          node:24;
+to            node:21;
+phases        ABC;
+configuration line_configuration:580;
+length        1.0;
+}
+
+object line_configuration:580 {
+	name line_configuration_80;
+	z11  1.620e+00+4.444e+00j;
+	z12  6.939e-01+1.879e+00j;
+	z13  6.939e-01+1.879e+00j;
+	z21  6.939e-01+1.879e+00j;
+	z22  1.620e+00+4.444e+00j;
+	z23  6.939e-01+1.879e+00j;
+	z31  6.939e-01+1.879e+00j;
+	z32  6.939e-01+1.879e+00j;
+	z33  1.620e+00+4.444e+00j;
+}
+
+object overhead_line:281 {
+name          overhead_line_81;
+from          node:21;
+to            node:25;
+phases        B;
+configuration line_configuration:581;
+length        1.0;
+}
+
+object line_configuration:581 {
+	name line_configuration_81;
+	z22  3.319e+01+7.223e+01j;
+}
+
+object overhead_line:282 {
+name          overhead_line_82;
+from          node:23;
+to            node:22;
+phases        ABC;
+configuration line_configuration:582;
+length        1.0;
+}
+
+object line_configuration:582 {
+	name line_configuration_82;
+	z11  2.155e+00+5.847e+00j;
+	z12  8.672e-01+2.503e+00j;
+	z13  8.672e-01+2.503e+00j;
+	z21  8.672e-01+2.503e+00j;
+	z22  2.155e+00+5.847e+00j;
+	z23  8.672e-01+2.503e+00j;
+	z31  8.672e-01+2.503e+00j;
+	z32  8.672e-01+2.503e+00j;
+	z33  2.155e+00+5.847e+00j;
+}
+
+object overhead_line:283 {
+name          overhead_line_83;
+from          node:46;
+to            node:24;
+phases        ABC;
+configuration line_configuration:583;
+length        1.0;
+}
+
+object line_configuration:583 {
+	name line_configuration_83;
+	z11  3.315e+00+9.037e+00j;
+	z12  1.387e+00+3.790e+00j;
+	z13  1.387e+00+3.790e+00j;
+	z21  1.387e+00+3.790e+00j;
+	z22  3.315e+00+9.037e+00j;
+	z23  1.387e+00+3.790e+00j;
+	z31  1.387e+00+3.790e+00j;
+	z32  1.387e+00+3.790e+00j;
+	z33  3.315e+00+9.037e+00j;
+}
+
+object overhead_line:284 {
+name          overhead_line_84;
+from          node:28;
+to            node:26;
+phases        ABC;
+configuration line_configuration:584;
+length        1.0;
+}
+
+object line_configuration:584 {
+	name line_configuration_84;
+	z11  1.177e+00+3.272e+00j;
+	z12  5.054e-01+1.375e+00j;
+	z13  5.054e-01+1.375e+00j;
+	z21  5.054e-01+1.375e+00j;
+	z22  1.177e+00+3.272e+00j;
+	z23  5.054e-01+1.375e+00j;
+	z31  5.054e-01+1.375e+00j;
+	z32  5.054e-01+1.375e+00j;
+	z33  1.177e+00+3.272e+00j;
+}
+
+object overhead_line:285 {
+name          overhead_line_85;
+from          node:29;
+to            node:27;
+phases        B;
+configuration line_configuration:585;
+length        1.0;
+}
+
+object line_configuration:585 {
+	name line_configuration_85;
+	z22  1.850e+03+5.069e+03j;
+}
+
+object overhead_line:286 {
+name          overhead_line_86;
+from          node:30;
+to            node:28;
+phases        ABC;
+configuration line_configuration:586;
+length        1.0;
+}
+
+object line_configuration:586 {
+	name line_configuration_86;
+	z11  1.626e+00+4.443e+00j;
+	z12  7.043e-01+1.862e+00j;
+	z13  7.043e-01+1.862e+00j;
+	z21  7.043e-01+1.862e+00j;
+	z22  1.626e+00+4.443e+00j;
+	z23  7.043e-01+1.862e+00j;
+	z31  7.043e-01+1.862e+00j;
+	z32  7.043e-01+1.862e+00j;
+	z33  1.626e+00+4.443e+00j;
+}
+
+object overhead_line:287 {
+name          overhead_line_87;
+from          node:30;
+to            node:29;
+phases        ABC;
+configuration line_configuration:587;
+length        1.0;
+}
+
+object line_configuration:587 {
+	name line_configuration_87;
+	z11  2.412e+00+6.584e+00j;
+	z12  9.886e-01+2.796e+00j;
+	z13  9.886e-01+2.796e+00j;
+	z21  9.886e-01+2.796e+00j;
+	z22  2.412e+00+6.584e+00j;
+	z23  9.886e-01+2.796e+00j;
+	z31  9.886e-01+2.796e+00j;
+	z32  9.886e-01+2.796e+00j;
+	z33  2.412e+00+6.584e+00j;
+}
+
+object overhead_line:288 {
+name          overhead_line_88;
+from          node:33;
+to            node:31;
+phases        ABC;
+configuration line_configuration:588;
+length        1.0;
+}
+
+object line_configuration:588 {
+	name line_configuration_88;
+	z11  5.245e+00+1.451e+01j;
+	z12  2.189e+00+6.621e+00j;
+	z13  2.189e+00+6.621e+00j;
+	z21  2.189e+00+6.621e+00j;
+	z22  5.245e+00+1.451e+01j;
+	z23  2.189e+00+6.621e+00j;
+	z31  2.189e+00+6.621e+00j;
+	z32  2.189e+00+6.621e+00j;
+	z33  5.245e+00+1.451e+01j;
+}
+
+object overhead_line:289 {
+name          overhead_line_89;
+from          node:35;
+to            node:31;
+phases        ABC;
+configuration line_configuration:589;
+length        1.0;
+}
+
+object line_configuration:589 {
+	name line_configuration_89;
+	z11  5.130e+00+1.063e+01j;
+	z12  1.578e+00+4.544e+00j;
+	z13  1.578e+00+4.544e+00j;
+	z21  1.578e+00+4.544e+00j;
+	z22  5.130e+00+1.063e+01j;
+	z23  1.578e+00+4.544e+00j;
+	z31  1.578e+00+4.544e+00j;
+	z32  1.578e+00+4.544e+00j;
+	z33  5.130e+00+1.063e+01j;
+}
+
+object overhead_line:290 {
+name          overhead_line_90;
+from          node:34;
+to            node:32;
+phases        ABC;
+configuration line_configuration:590;
+length        1.0;
+}
+
+object line_configuration:590 {
+	name line_configuration_90;
+	z11  1.019e+01+1.352e+01j;
+	z12  1.891e+00+5.129e+00j;
+	z13  1.891e+00+5.129e+00j;
+	z21  1.891e+00+5.129e+00j;
+	z22  1.019e+01+1.352e+01j;
+	z23  1.891e+00+5.129e+00j;
+	z31  1.891e+00+5.129e+00j;
+	z32  1.891e+00+5.129e+00j;
+	z33  1.019e+01+1.352e+01j;
+}
+
+object overhead_line:291 {
+name          overhead_line_91;
+from          node:34;
+to            node:33;
+phases        ABC;
+configuration line_configuration:591;
+length        1.0;
+}
+
+object line_configuration:591 {
+	name line_configuration_91;
+	z11  2.768e+00+3.707e+00j;
+	z12  4.958e-01+1.383e+00j;
+	z13  4.958e-01+1.383e+00j;
+	z21  4.958e-01+1.383e+00j;
+	z22  2.768e+00+3.707e+00j;
+	z23  4.958e-01+1.383e+00j;
+	z31  4.958e-01+1.383e+00j;
+	z32  4.958e-01+1.383e+00j;
+	z33  2.768e+00+3.707e+00j;
+}
+
+object overhead_line:292 {
+name          overhead_line_92;
+from          node:51;
+to            node:35;
+phases        ABC;
+configuration line_configuration:592;
+length        1.0;
+}
+
+object line_configuration:592 {
+	name line_configuration_92;
+	z11  1.693e+01+2.500e+02j;
+	z12  4.605e+00-1.431e+01j;
+	z13  4.605e+00-1.431e+01j;
+	z21  4.605e+00-1.431e+01j;
+	z22  1.693e+01+2.500e+02j;
+	z23  4.605e+00-1.431e+01j;
+	z31  4.605e+00-1.431e+01j;
+	z32  4.605e+00-1.431e+01j;
+	z33  1.693e+01+2.500e+02j;
+}
+
+object overhead_line:293 {
+name          overhead_line_93;
+from          node:39;
+to            node:36;
+phases        ABC;
+configuration line_configuration:593;
+length        1.0;
+}
+
+object line_configuration:593 {
+	name line_configuration_93;
+	z11  2.681e+00+7.228e+00j;
+	z12  1.098e+00+3.036e+00j;
+	z13  1.098e+00+3.036e+00j;
+	z21  1.098e+00+3.036e+00j;
+	z22  2.681e+00+7.228e+00j;
+	z23  1.098e+00+3.036e+00j;
+	z31  1.098e+00+3.036e+00j;
+	z32  1.098e+00+3.036e+00j;
+	z33  2.681e+00+7.228e+00j;
+}
+
+object overhead_line:294 {
+name          overhead_line_94;
+from          node:40;
+to            node:36;
+phases        ABC;
+configuration line_configuration:594;
+length        1.0;
+}
+
+object line_configuration:594 {
+	name line_configuration_94;
+	z11  6.596e-01+1.791e+00j;
+	z12  2.830e-01+7.542e-01j;
+	z13  2.830e-01+7.542e-01j;
+	z21  2.830e-01+7.542e-01j;
+	z22  6.596e-01+1.791e+00j;
+	z23  2.830e-01+7.542e-01j;
+	z31  2.830e-01+7.542e-01j;
+	z32  2.830e-01+7.542e-01j;
+	z33  6.596e-01+1.791e+00j;
+}
+
+object overhead_line:295 {
+name          overhead_line_95;
+from          node:40;
+to            node:37;
+phases        ABC;
+configuration line_configuration:595;
+length        1.0;
+}
+
+object line_configuration:595 {
+	name line_configuration_95;
+	z11  3.504e+00+6.549e+00j;
+	z12  8.867e-01+2.654e+00j;
+	z13  8.867e-01+2.654e+00j;
+	z21  8.867e-01+2.654e+00j;
+	z22  3.504e+00+6.549e+00j;
+	z23  8.867e-01+2.654e+00j;
+	z31  8.867e-01+2.654e+00j;
+	z32  8.867e-01+2.654e+00j;
+	z33  3.504e+00+6.549e+00j;
+}
+
+object overhead_line:296 {
+name          overhead_line_96;
+from          node:39;
+to            node:38;
+phases        C;
+configuration line_configuration:596;
+length        1.0;
+}
+
+object line_configuration:596 {
+	name line_configuration_96;
+	z33  9.158e+01+2.103e+02j;
+}
+
+object overhead_line:298 {
+name          overhead_line_98;
+from          node:45;
+to            node:41;
+phases        ABC;
+configuration line_configuration:598;
+length        1.0;
+}
+
+object line_configuration:598 {
+	name line_configuration_98;
+	z11  3.488e+00+7.996e+00j;
+	z12  1.196e+00+3.580e+00j;
+	z13  1.191e+00+3.568e+00j;
+	z21  1.196e+00+3.580e+00j;
+	z22  3.508e+00+8.032e+00j;
+	z23  1.196e+00+3.580e+00j;
+	z31  1.191e+00+3.568e+00j;
+	z32  1.196e+00+3.580e+00j;
+	z33  3.488e+00+7.996e+00j;
+}
+
+object overhead_line:299 {
+name          overhead_line_99;
+from          node:43;
+to            node:42;
+phases        B;
+configuration line_configuration:599;
+length        1.0;
+}
+
+object line_configuration:599 {
+	name line_configuration_99;
+	z22  3.135e+01+2.158e+01j;
+}
+
+object overhead_line:300 {
+name          overhead_line_100;
+from          node:45;
+to            node:42;
+phases        B;
+configuration line_configuration:600;
+length        1.0;
+}
+
+object line_configuration:600 {
+	name line_configuration_100;
+	z22  1.585e+02+4.029e+02j;
+}
+
+object overhead_line:301 {
+name          overhead_line_101;
+from          node:45;
+to            node:44;
+phases        ABC;
+configuration line_configuration:601;
+length        1.0;
+}
+
+object line_configuration:601 {
+	name line_configuration_101;
+	z11  4.744e+00+1.071e+01j;
+	z12  1.569e+00+4.796e+00j;
+	z13  1.569e+00+4.796e+00j;
+	z21  1.569e+00+4.796e+00j;
+	z22  4.744e+00+1.071e+01j;
+	z23  1.569e+00+4.796e+00j;
+	z31  1.569e+00+4.796e+00j;
+	z32  1.569e+00+4.796e+00j;
+	z33  4.744e+00+1.071e+01j;
+}
+
+object overhead_line:302 {
+name          overhead_line_102;
+from          node:48;
+to            node:46;
+phases        ABC;
+configuration line_configuration:602;
+length        1.0;
+}
+
+object line_configuration:602 {
+	name line_configuration_102;
+	z11  1.183e+00+3.129e+00j;
+	z12  4.816e-01+1.331e+00j;
+	z13  4.816e-01+1.331e+00j;
+	z21  4.816e-01+1.331e+00j;
+	z22  1.183e+00+3.129e+00j;
+	z23  4.816e-01+1.331e+00j;
+	z31  4.816e-01+1.331e+00j;
+	z32  4.816e-01+1.331e+00j;
+	z33  1.183e+00+3.129e+00j;
+}
+
+object overhead_line:303 {
+name          overhead_line_103;
+from          node:49;
+to            node:47;
+phases        C;
+configuration line_configuration:603;
+length        1.0;
+}
+
+object line_configuration:603 {
+	name line_configuration_103;
+	z33  6.244e+01+1.051e+02j;
+}
+
+object overhead_line:304 {
+name          overhead_line_104;
+from          node:50;
+to            node:48;
+phases        ABC;
+configuration line_configuration:604;
+length        1.0;
+}
+
+object line_configuration:604 {
+	name line_configuration_104;
+	z11  2.430e+00+6.666e+00j;
+	z12  1.022e+00+2.809e+00j;
+	z13  1.022e+00+2.809e+00j;
+	z21  1.022e+00+2.809e+00j;
+	z22  2.430e+00+6.666e+00j;
+	z23  1.022e+00+2.809e+00j;
+	z31  1.022e+00+2.809e+00j;
+	z32  1.022e+00+2.809e+00j;
+	z33  2.430e+00+6.666e+00j;
+}
+
+object overhead_line:305 {
+name          overhead_line_105;
+from          node:50;
+to            node:49;
+phases        ABC;
+configuration line_configuration:605;
+length        1.0;
+}
+
+object line_configuration:605 {
+	name line_configuration_105;
+	z11  2.004e+00+5.514e+00j;
+	z12  8.373e-01+2.312e+00j;
+	z13  8.373e-01+2.312e+00j;
+	z21  8.373e-01+2.312e+00j;
+	z22  2.004e+00+5.514e+00j;
+	z23  8.373e-01+2.312e+00j;
+	z31  8.373e-01+2.312e+00j;
+	z32  8.373e-01+2.312e+00j;
+	z33  2.004e+00+5.514e+00j;
+}
+
+object group_recorder{
+file         ./node_voltage_A_MAG.csv;
+group        "class=node";
+property     voltage_A;
+complex_part MAG;
+interval     60;
+}
+object group_recorder{
+file         ./node_voltage_B_MAG.csv;
+group        "class=node";
+property     voltage_B;
+complex_part MAG;
+interval     60;
+}
+object group_recorder{
+file         ./node_voltage_C_MAG.csv;
+group        "class=node";
+property     voltage_C;
+complex_part MAG;
+interval     60;
+}
+object group_recorder{
+file         ./overhead_line_current_out_A_MAG.csv;
+group        "class=overhead_line";
+property     current_out_A;
+complex_part MAG;
+interval     60;
+}
+object group_recorder{
+file         ./overhead_line_current_out_B_MAG.csv;
+group        "class=overhead_line";
+property     current_out_B;
+complex_part MAG;
+interval     60;
+}
+object group_recorder{
+file         ./overhead_line_current_out_C_MAG.csv;
+group        "class=overhead_line";
+property     current_out_C;
+complex_part MAG;
+interval     60;
+}
+

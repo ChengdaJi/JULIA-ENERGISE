@@ -1,0 +1,13 @@
+area_bank_circuit,capacity_MW,number_of_5kW_arrays
+allendale_bank139_ckt1,5.40,1080
+allendale_bank139_ckt2,5.78,1155
+allendale_bank139_ckt3,8.95,1790
+allendale_bank139_ckt4,8.88,1775
+allendale_bank239_ckt1,8.75,1750
+allendale_bank239_ckt2,13.25,2650
+allendale_bank239_ckt3,7.65,1530
+allendale_bank239_ckt4,11.50,2300
+bloomingGrove_bank276_ckt1,9.45,1890
+bloomingGrove_bank276_ckt2,4.35,870
+bloomingGrove_bank276_ckt3,7.85,1570
+bloomingGrove_bank276_ckt4,4.05,810
