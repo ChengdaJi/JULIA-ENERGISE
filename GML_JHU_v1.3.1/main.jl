@@ -22,7 +22,7 @@ B_input = 0.1;
 GML_setpoint = GML_RHC_DET(current_time, B_input)
 # Optimal battery discharge
 GML_setpoint.R
-println(string("Optimal battery discharge rate ", GML_setpoint.R, " MW"))
+println(string("Optimal battery discharge value ", GML_setpoint.R, " MW"))
 # Optimal Solar Generation
 GML_setpoint.Pg
 println(string("Optimal solar generation ", GML_setpoint.Pg, " MW"))

@@ -69,8 +69,8 @@ function GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf)
     S=35*ones(1,T);
     # V
     Base_V=69;
-    V_min = Base_V*0.96;
-    V_max = Base_V*1.06;
+    V_min = Base_V*0.95;
+    V_max = Base_V*1.05;
 
     # impedance
     r=[0.13275; 0.13275; 0.199125];
@@ -135,8 +135,8 @@ price, ancillary_type);
     for tb_index=1:BN
         push!(TB, (tb_index-1)*4+1:tb_index*4)
     end
-    V_min_0=69*0.96;
-    V_max_0=69*1.04;
+    V_min_0=69*0.95;
+    V_max_0=69*1.05;
 
 
 
@@ -278,6 +278,11 @@ price, ancillary_type);
     l_o=JuMP.value.(l_rt)
     v_o=JuMP.value.(v_rt)
 
+    Qf_o_s=JuMP.value.(Qf)
+    Pg_o_s=JuMP.value.(Pg)
+    R_o_s=JuMP.value.(R)
+    v_o_s=JuMP.value.(v)
+
 
     # Pg_s = JuMP.value.(Pg);
     # Qf_s = JuMP.value.(Qf);
@@ -300,7 +305,26 @@ price, ancillary_type);
     for feeder = 1:F
         Pf_o[feeder,1]=Pd[feeder,1]-Pg_o[feeder,1]-R_o[feeder,1]
     end
-    val_opt = (R=(R_o[1,1]), Pg=(Pg_o[1,1]), Qf=(Qf_o[1,1]), v=(sqrt(v_o[1,1])))
+    FOL_Horizon = 6;
+    R_opt = zeros(1,6);
+    Pg_opt = zeros(1,6);
+    Qf_opt = zeros(1,6);
+    v_opt = zeros(1,6);
+    println(size(R_o))
+    for FOL_num = 1:FOL_Horizon
+        if FOL_num ==1
+            R_opt[1, FOL_num]=R_o[1,FOL_num];
+            Pg_opt[1, FOL_num]=Pg_o[1,FOL_num];
+            Qf_opt[1, FOL_num]=Qf_o[1,FOL_num];
+            v_opt[1, FOL_num]=sqrt(v_o[1,FOL_num]);
+        else
+            R_opt[1, FOL_num]=R_o_s[1,FOL_num];
+            Pg_opt[1, FOL_num]=Pg_o_s[1,FOL_num];
+            Qf_opt[1, FOL_num]=Qf_o_s[1,FOL_num];
+            v_opt[1, FOL_num]=sqrt(v_o_s[1,FOL_num]);
+        end
+    end
+    val_opt = (R=(R_opt), Pg=(Pg_opt), Qf=(Qf_opt), v=(v_opt))
     # val_opt = Optimization_output_struct(Pf_o, Qf_o, Pg_o, B_o, R_o, P_hat_o, Q_hat_o, l_o, v_o, P_rsrv_o, B_rsrv_o, P_0_o, cost_o, time_solve)
     return val_opt
 end
