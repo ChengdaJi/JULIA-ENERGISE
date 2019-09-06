@@ -15,6 +15,8 @@ include("GML_struct.jl")
 include("GML_RHC.jl")
 ## sys para
 ancillary_type="10min"
+# ancillary_type="30min"
+# ancillary_type="Without"
 # # of timeslots
 T=288;
 # # of banks
@@ -24,8 +26,6 @@ BN=3;
 F=BN*4;
 # # of secnarios
 SN=6;
-
-
 
 ################################################################################
 # penetation level
@@ -41,12 +41,7 @@ Pred_length=24; # 5 min per slots
 solar_error_max = 0.025;
 ################################################################################
 
-
 # # initial SOC
-global B_feedback=reshape([0.0910,0.0942,0.1434,0.1402,0.1382,0.2144,0.1192,0.1813,
-    0.1355,0.0664,0.1182,0.0580],12,1);
-P_rsrv_feedback = [];
-
 # load price data
 price_raw = read_price_data()
 delta_rt_raw=matread("../data/price_prediction.mat");
@@ -66,15 +61,16 @@ elseif solar_error_max == 0.1
 end
 pg_raw = read_solar_data()
 # #
-current_time=1
+for current_time=1:T
     ct_printout = string("===== GML - At Time ", current_time);
     println("=================================================")
     println(ct_printout)
-    global feedback = feedback_struct(B_feedback, [])
-    #####
-    # need lambda_rt/alpha_rt
-    # pd
-    # println(size(feedback.B_feedback))
+    if current_time ==1
+        global P_rsrv_feedback = [];
+        global B_feedback=reshape([0.0910,0.0942,0.1434,0.1402,0.1382,0.2144,0.1192,0.1813,
+            0.1355,0.0664,0.1182,0.0580],12,1);
+    end
+    global feedback = (B_feedback=(B_feedback), P_rsrv_feedback=(P_rsrv_feedback));
     price = price_traj(current_time, ancillary_type, price_raw, delta_rt_raw, T, Pred_length);
     # plot(1:287, price.alpha_scenario[1,:])
     pd = pd_traj(current_time, pd_raw, pd_noise, BN, T, Pred_length);
@@ -85,9 +81,14 @@ current_time=1
     for feeder = 1:12
         B_feedback[feeder, 1] = val_opt.B[feeder,1] - val_opt.R[feeder,1]/12;
     end
+    if current_time == 1
+        P_rsrv_feedback = [val_opt.P_rsrv]
+    else
+        push!(P_rsrv_feedback,val_opt.P_rsrv)
+    end
     write_output_out(val_opt, current_time)
     println("=================================================")
-
+end
 
 
 

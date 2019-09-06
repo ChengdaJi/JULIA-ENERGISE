@@ -20,7 +20,7 @@ function price_traj(t, ancillary_type, price_raw, delta_rt_raw, T, Pred_length)
         alpha_pd=alpha_rt.+delta_rt_raw["RSRV10centroid"][PTID,t][:,1:Pred_length];
         alpha_scenario=hcat(alpha_pd,zeros(Pred_scen,T-1-Pred_length));
     elseif ancillary_type == "30min"
-        alpha_rt=price_raw.RSRV_10[t];
+        alpha_rt=price_raw.RSRV_30[t];
         alpha_pd=alpha_rt.+delta_rt_raw["RSRV30centroid"][PTID,t][:,1:Pred_length];
         alpha_scenario=hcat(alpha_pd,zeros(Pred_scen,T-1-Pred_length));
     end

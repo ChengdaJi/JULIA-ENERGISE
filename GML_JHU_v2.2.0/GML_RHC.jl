@@ -1,6 +1,6 @@
 function GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf)
 
-    println("===== GML - Boundaries Buildup ===== ");
+    println("===== GML - Boundaries Buildup");
     ###############################################################################
 
     # feeder level
@@ -47,7 +47,7 @@ end
 
 function optimal_stoach_scenario(current_time, obj, feedback, pd, pg,
 price, ancillary_type);
-    println("===== GML - Optimization =====")
+    println("===== GML - Optimization ")
 
     #################
     #  F,T or BN, T #
@@ -92,7 +92,6 @@ price, ancillary_type);
 
     B_feedback = feedback.B_feedback;
     P_rsrv_feedback = feedback.P_rsrv_feedback;
-
     TB=[];
     for tb_index=1:BN
         push!(TB, (tb_index-1)*4+1:tb_index*4)
@@ -222,30 +221,35 @@ price, ancillary_type);
     ###########################################################################
     # variables and Constraints for reserve markets
     if ancillary_type == "10min" || ancillary_type == "30min"
+        # RT
         @variable(m, P_rsrv_rt)
         @variable(m, B_rsrv_rt)
         @constraint(m, P_rsrv_rt>=0)
+        @constraint(m, B_rsrv_rt>=0)
         if current_time <= tau
             @constraint(m, B_rsrv_rt==0)
         elseif current_time - tau>=1
-            ini_fb = max(ct-tau-k+1,1);
-            fni_fb = ct-tau;
-            length_rt = fni_fb - ini_fb +1;
-            mult_rt = k-length_rt+1:k;
-            temp_f_rsrv_c_fb = mult_rt[1]*P_rsrv_feedback[ini_fb]
-            if length_rt >= 2
-                for f_rsrv_fb_n=2:length_rt;
+            ini_fb = max(current_time-tau-k+1,1);
+            fni_fb = current_time-tau;
+            length_fb = fni_fb - ini_fb +1;
+            mult_fb = k-length_fb+1:k;
+            temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb]
+            if length_fb >= 2
+                for f_rsrv_fb_n=2:length_fb;
                     temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
-                        mult_rt[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
+                        mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
                 end
             end
             @constraint(m, B_rsrv_rt==delta_t*temp_f_rsrv_c_fb)
         end
         @constraint(m, B_rsrv_rt <= sum(B_rt))
+        # Scenario
         @variable(m, P_rsrv[1:SN,1:T-1])
         @variable(m, B_rsrv[1:SN,1:T-1])
         for scenario=1:SN
             for t_real=current_time+1:current_time+T-1
+                @constraint(m, P_rsrv[scenario, t_real-current_time]>=0)
+                @constraint(m, B_rsrv[scenario, t_real-current_time]>=0)
                 ini = t_real-tau-k+1;
                 fin = t_real-tau;
                 if fin <=0
@@ -287,10 +291,10 @@ price, ancillary_type);
                         length_sc = fin_sc - ini_sc +1;
                         mult_sc = k-length_sc+1:k;
                         mult_rt = k-length_sc;
-                        temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc]
+                        temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
                         if length_sc > 1
                             for f_rsrv_sc_n=2:length_sc
-                                temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n];
+                                temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
                             end
                         end
                         @constraint(m, B_rsrv[scenario, t_real-current_time] == delta_t*mult_rt*P_rsrv_rt+delta_t*temp_f_rsrv_c_sc);
@@ -299,10 +303,10 @@ price, ancillary_type);
                         fin_sc = fin;
                         length_sc = fin_sc - ini_sc +1;
                         mult_sc = k-length_sc+1:k;
-                        temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc]
+                        temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
                         if length_sc > 1
                             for f_rsrv_sc_n=2:length_sc
-                                temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n];
+                                temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
                             end
                         end
                         mult_rt = k-length_sc;
@@ -317,27 +321,26 @@ price, ancillary_type);
                             end
                         end
                         @constraint(m, B_rsrv[scenario, t_real-current_time] ==
-                        delta_t*mult_rt*P_rsrv_rt+delta_t*temp_f_rsrv_c_sc+delta_t*temp_f_rsrv_c_sc);
+                        delta_t*mult_rt*P_rsrv_rt+delta_t*temp_f_rsrv_c_sc+delta_t*temp_f_rsrv_c_fb);
                     end
                 elseif ini == current_time
                     ini_sc = current_time+1;
                     fin_sc = fin;
                     mult_sc = 2:k;
-                    temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc]
+                    temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time];
                     for f_rsrv_sc_n=2:k-1
-                        temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n];
+                        temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
                     end
-                    @constraint(m, B_rsrv[scenario, t_real-current_time] ==
-                    delta_t*P_rsrv_rt+delta_t*temp_f_rsrv_c_sc);
+                    @constraint(m, B_rsrv[scenario, t_real-current_time] ==delta_t*P_rsrv_rt+delta_t*temp_f_rsrv_c_sc);
                 elseif ini > current_time
                     ini_sc = ini;
                     fin_sc = fin;
                     mult_sc = 1:k;
-                    temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc]
+                    temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
                     for f_rsrv_sc_n=2:k
-                        temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n];
+                        temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
                     end
-                    @constraint(m, B_rsrv[scenario, t_real-current_time] ==delta_t*temp_f_rsrv_c_sc);
+                    @constraint(m, B_rsrv[scenario, t_real-current_time] == delta_t*temp_f_rsrv_c_sc);
                     if  t_real-current_time >= T-tau-1
                         @constraint(m, P_rsrv[scenario, t_real-current_time]==0)
                     end
@@ -346,8 +349,13 @@ price, ancillary_type);
             end
         end
     end
-    @objective(m, Min,
-        fn_cost_RHC(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,P_rsrv_rt,P_rsrv,price,pg,pd,beta,SN,obj))
+    if ancillary_type == "10min" || ancillary_type == "30min"
+        @objective(m, Min,
+            fn_cost_RHC_anc(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,P_rsrv_rt,P_rsrv,price,pg,pd,beta,SN,obj))
+    else
+        @objective(m, Min,
+            fn_cost_RHC_rt(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,price,pg,pd,beta,SN,obj))
+    end
     status=optimize!(m);
 
     println(string("    ----", termination_status(m)))
@@ -366,8 +374,15 @@ price, ancillary_type);
     Q_hat_o=JuMP.value.(Q_hat_rt)
     l_o=JuMP.value.(l_rt)
     v_o=JuMP.value.(v_rt)
-    P_rsrv_o=0;
-    B_rsrv_o=0;
+    if ancillary_type == "10min" || ancillary_type == "30min"
+        P_rsrv_o=JuMP.value(P_rsrv_rt);
+        B_rsrv_o=JuMP.value(B_rsrv_rt);
+        P_rsrv_s=JuMP.value.(P_rsrv);
+        B_rsrv_s=JuMP.value.(B_rsrv);
+    else
+        P_rsrv_o = 0;
+        B_rsrv_o = 0;
+    end
     P_0_o=sum(P_hat_o)
     cost_o=JuMP.objective_value(m);
     Pf_o=zeros(F,1)
@@ -379,7 +394,7 @@ price, ancillary_type);
     return val_opt
 end
 
-function fn_cost_RHC(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,P_rsrv_rt,P_rsrv,price,pg,pd,beta,SN,obj)
+function fn_cost_RHC_anc(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,P_rsrv_rt,P_rsrv,price,pg,pd,beta,SN,obj)
 
     # println("    ---- Load the optimal function")
     T=obj.T;
@@ -403,28 +418,46 @@ function fn_cost_RHC(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,P_rsrv_rt,P_rsrv,price,pg,p
 
     Pg_diff_scenario = Pg_diff_scenario-
         sum(positive_array(icdf.*sqrt.(pd.sigma+pg.sigma)+pg.mu_scenario));
-
-    if ancillary_type == "10min" || ancillary_type == "30min"
-        P_rsrv_scenario = price.probability[1]/sum_prob*P_rsrv[1,:];
-        println(size(P_rsrv_scenario))
-        println(size(reshape(price.alpha_scenario[1, :],T-1,1)))
-        Cost_P_rsrv_scenario = reshape(P_rsrv_scenario, 1, T-1)*reshape(price.alpha_scenario[1, :],T-1,1);
-        if SN>1
-            for scenario =2:SN
-                P_rsrv_scenario = price.probability[scenario]/sum_prob*P_rsrv[scenario,:];
-                Cost_P_rsrv_scenario = Cost_P_rsrv_scenario+reshape(P_rsrv_scenario, 1, T-1)*reshape(price.alpha_scenario[scenario, :],T-1,1);;
-            end
+    println(string("    ----Case: Real-time Balancing and ", ancillary_type," Reserve Market"))
+    P_rsrv_scenario = price.probability[1]/sum_prob*P_rsrv[1,:];
+    Cost_P_rsrv_scenario = reshape(P_rsrv_scenario, 1, T-1)*reshape(price.alpha_scenario[1, 1:T-1],T-1,1);
+    if SN>1
+        for scenario =2:SN
+            P_rsrv_scenario = price.probability[scenario]/sum_prob*P_rsrv[scenario,:];
+            Cost_P_rsrv_scenario = Cost_P_rsrv_scenario+reshape(P_rsrv_scenario, 1, T-1)*reshape(price.alpha_scenario[scenario, :],T-1,1);;
         end
-        return delta_t*price.lambda_rt*sum(P_hat_rt[:,1])+(delta_t*Cost_P_hat_scenario)[1,1]+
-            delta_t*beta*Pg_diff_scenario+
-            delta_t*price.alpha_rt*P_rsrv_rt;
-            # +(delta_t*Cost_P_rsrv_scenario)[1,1]
-    else
-        return delta_t*price.lambda_rt*sum(P_hat_rt[:,1])+(delta_t*Cost_P_hat_scenario)[1,1]+
-            delta_t*beta*Pg_diff_scenario
     end
+    return delta_t*price.lambda_rt*sum(P_hat_rt[:,1])+(delta_t*Cost_P_hat_scenario)[1,1]+
+        delta_t*beta*Pg_diff_scenario-
+        delta_t*price.alpha_rt*P_rsrv_rt-(delta_t*Cost_P_rsrv_scenario)[1,1];
+end
 
+function fn_cost_RHC_rt(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,price,pg,pd,beta,SN,obj)
 
+    # println("    ---- Load the optimal function")
+    T=obj.T;
+    icdf = obj.icdf;
+    sum_prob = sum(price.probability[1:SN])
+    P_hat_scenario=
+        price.probability[1]/sum_prob*sum(P_hat[1, :, :], dims=1);
+    Cost_P_hat_scenario = P_hat_scenario*reshape(price.lambda_scenario[1, :],T-1,1);
+    Pg_diff_scenario=sum(Pg_rt[:,1])-sum(pg.mu_rt)+
+        price.probability[1]/sum_prob*sum(Pg[1, :, :]);
+    if SN>1
+        for scenario = 2:SN
+            P_hat_scenario=P_hat_scenario+
+                price.probability[scenario]/sum_prob*sum(P_hat[scenario, :, :], dims=1);
+            Cost_P_hat_scenario=Cost_P_hat_scenario+price.probability[scenario]/sum_prob*sum(P_hat[scenario, :, :], dims=1)*
+                reshape(price.lambda_scenario[scenario, :],T-1,1);
+            Pg_diff_scenario = Pg_diff_scenario+
+                price.probability[scenario]/sum_prob*sum(Pg[scenario, :, :]);
+        end
+    end
+    Pg_diff_scenario = Pg_diff_scenario-
+        sum(positive_array(icdf.*sqrt.(pd.sigma+pg.sigma)+pg.mu_scenario));
+    println("    ----Case: Real-time Balancing")
+    return delta_t*price.lambda_rt*sum(P_hat_rt[:,1])+(delta_t*Cost_P_hat_scenario)[1,1]+
+        delta_t*beta*Pg_diff_scenario
 end
 
 
@@ -448,16 +481,17 @@ end
 
 function write_output_out(val_opt, current_time)
         # write the solar file
-    println("===== GML - Write Output File =====");
+    println("===== GML - Write Output File");
     name=string("results/Time", current_time, ".csv");
     cost = repeat([val_opt.cost], 12, 1)
     time = repeat([val_opt.time], 12, 1)
+    p_rsrv = repeat([val_opt.P_rsrv], 12, 1)
     global feeder_num=[string("feeder",1)]
     for i=2:12
         feeder_num=vcat(feeder_num, string("feeder",i))
     end
-    RT_data_feeder=hcat(feeder_num, val_opt.Pf, val_opt.Qf, val_opt.Pg, val_opt.B,val_opt.R, cost, time)
-    CSV.write(name, DataFrame(RT_data_feeder, [:Feeder, :Pf, :QF, :Pg, :B, :R, :Cost, :time]));
+    RT_data_feeder=hcat(feeder_num, val_opt.Pf, val_opt.Qf, val_opt.Pg, val_opt.B,val_opt.R, p_rsrv, cost, time)
+    CSV.write(name, DataFrame(RT_data_feeder, [:Feeder, :Pf, :QF, :Pg, :B, :R, :P_rsrv, :Cost, :time]));
     # println("    ---- Finish writting files! ")
 end
 
@@ -474,17 +508,6 @@ function read_price_data()
     return price_raw
 end
 
-# function read_demand_data()
-#     filename = "../data/Feb_6_7.csv"
-#     data_trace = CSV.read(filename)
-#     pd_raw=zeros(12, 576)
-#     for time=1:576
-#         for feeder=1:12
-#             pd_raw[feeder, time] = data_trace[time,feeder+1];
-#         end
-#     end
-#     return pd_raw
-# end
 function read_demand_data()
     filename = "../data/demand_feb_6_7.csv"
     data_trace = CSV.File(filename; dateformat="yyyy-mm-dd") |> DataFrame
