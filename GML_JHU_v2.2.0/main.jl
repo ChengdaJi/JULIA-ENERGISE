@@ -14,7 +14,7 @@ include("traj_gen.jl")
 include("GML_struct.jl")
 include("GML_RHC.jl")
 ## sys para
-ancillary_type="10min"
+ancillary_type="without"
 # ancillary_type="30min"
 # ancillary_type="Without"
 # # of timeslots
@@ -38,6 +38,8 @@ icdf = -1.6449; #0.95
 # # prediction Pred_length
 Pred_length=24; # 5 min per slots
 ## read solar
+# solar_error_max = 0.1;
+# solar_error_max = 0.05;
 solar_error_max = 0.025;
 ################################################################################
 

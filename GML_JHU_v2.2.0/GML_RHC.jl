@@ -384,7 +384,7 @@ price, ancillary_type);
         B_rsrv_o = 0;
     end
     P_0_o=sum(P_hat_o)
-    cost_o=JuMP.objective_value(m);
+    cost_o=P_0_o*price.lambda_rt/12;
     Pf_o=zeros(F,1)
     for feeder = 1:F
         Pf_o[feeder,1]=Pd[feeder,1]-Pg_o[feeder,1]-R_o[feeder,1]
@@ -482,16 +482,17 @@ end
 function write_output_out(val_opt, current_time)
         # write the solar file
     println("===== GML - Write Output File");
-    name=string("results/Time", current_time, ".csv");
+    name=string("results/Chengda/Solar0025Time", current_time, ".csv");
     cost = repeat([val_opt.cost], 12, 1)
     time = repeat([val_opt.time], 12, 1)
+    P_0 = repeat([val_opt.P_0], 12, 1)
     p_rsrv = repeat([val_opt.P_rsrv], 12, 1)
     global feeder_num=[string("feeder",1)]
     for i=2:12
         feeder_num=vcat(feeder_num, string("feeder",i))
     end
-    RT_data_feeder=hcat(feeder_num, val_opt.Pf, val_opt.Qf, val_opt.Pg, val_opt.B,val_opt.R, p_rsrv, cost, time)
-    CSV.write(name, DataFrame(RT_data_feeder, [:Feeder, :Pf, :QF, :Pg, :B, :R, :P_rsrv, :Cost, :time]));
+    RT_data_feeder=hcat(feeder_num, val_opt.Pf, val_opt.Qf, val_opt.Pg, val_opt.B,val_opt.R, p_rsrv, P_0, cost, time)
+    CSV.write(name, DataFrame(RT_data_feeder, [:Feeder, :Pf, :QF, :Pg, :B, :R, :P_rsrv, :P_0, :Cost, :time]));
     # println("    ---- Finish writting files! ")
 end
 

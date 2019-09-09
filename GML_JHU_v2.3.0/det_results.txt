@@ -1,0 +1,54 @@
+Without Ancillary
+Solar Penetration Rate
+
+p_rate = 0.25
+
+Cost 23709.84
+Solve_time ~0.4
+Pg/Pg_aval 99.9%
+
+p_rate = 0.5
+
+Cost = 16012.02
+Solve_time ~0.45
+Pg/Pg_aval 98.5%
+Pg_aval = 4007.3156
+
+p_rate = 0.75
+
+Cost = 10761
+Solve_time ~0.45
+Pg/Pg_aval 89.6%
+
+p_rate = 1
+
+Cost = 8124
+Solve_time ~0.5
+Pg/Pg_aval 78.3%
+
+10min
+Solar Penetration Rate
+
+p_rate = 0.25
+
+Cost 23700.12
+Solve_time ~0.45
+Pg/Pg_aval 99.9%
+
+p_rate = 0.5
+
+Cost = 16002.48
+Solve_time ~0.5
+Pg/Pg_aval 98.5%
+
+p_rate = 0.75
+
+Cost = 10752.3
+Solve_time ~0.45
+Pg/Pg_aval 89.6%
+
+p_rate = 1
+
+Cost = 8121.33
+Solve_time ~0.65
+Pg/Pg_aval 78.3%
