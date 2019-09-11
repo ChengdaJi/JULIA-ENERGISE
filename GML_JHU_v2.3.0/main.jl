@@ -14,7 +14,7 @@ include("traj_gen_det.jl")
 include("GML_struct.jl")
 include("GML_RHC.jl")
 ## sys para
-ancillary_type="10min"
+ancillary_type="without"
 # ancillary_type="30min"
 # ancillary_type="Without"
 # # of timeslots
@@ -29,18 +29,11 @@ SN=1;
 
 ################################################################################
 # penetation level
-p_rate=0.5; # 0.25 0.5 0.75 1
+p_rate=0.75; # 0.25 0.5 0.75 1
 
 # deterministic
 icdf = 0;
-# icdf = -1.6449; #0.95
-# # icdf = -1.2816 #0.9
-# # icdf = -1.0364 #0.85
 #
-# # # prediction Pred_length
-# Pred_length=24; # 5 min per slots
-# ## read solar
-# solar_error_max = 0.025;
 ################################################################################
 
 # # initial SOC
@@ -54,13 +47,13 @@ pd_noise = matread("../data/demand_noise.mat")["demand_noise"];
 
 
 
-if solar_error_max == 0.025
-    pg_noise = matread("../data/solar_noise_0025.mat")["solar_noise"];
-elseif solar_error_max == 0.05
-    pg_noise = matread("../data/solar_noise_005.mat")["solar_noise"];
-elseif solar_error_max == 0.1
-    pg_noise = matread("../data/solar_noise_01.mat")["solar_noise"];
-end
+# if solar_error_max == 0.025
+#     pg_noise = matread("../data/solar_noise_0025.mat")["solar_noise"];
+# elseif solar_error_max == 0.05
+#     pg_noise = matread("../data/solar_noise_005.mat")["solar_noise"];
+# elseif solar_error_max == 0.1
+#     pg_noise = matread("../data/solar_noise_01.mat")["solar_noise"];
+# end
 pg_raw = read_solar_data()
 # #
 current_time=1;
@@ -80,6 +73,8 @@ price, ancillary_type);
 pg_aval = sum(pg.mu, dims=1)
 println(string("Solar Utlizing rate ", sum(val_opt.Pg)/sum(pg_aval)));
 println(string("Total avaliability is ", sum(pg_aval)));
+println(string("Total demand is ", sum(pd.traj)));
+println(string("Total solar is ", sum(val_opt.Pg)));
 # write_output_out(val_opt, current_time)
 # println("=================================================")
 

@@ -2,20 +2,22 @@ function GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf)
 
     println("===== GML - Boundaries Buildup");
     ###############################################################################
-
+    T_hr = 24-ceil(Int, T/12)
     # feeder level
-    Qf_max=0.05*positive_array(pd.traj);
+    Qf_max=hcat(0.05*positive_array(pd.traj),0.05*positive_array(pd.pred_hr));
     Qf_min = -Qf_max;
     # minimum solar
-    Pg_min = zeros(F, T);
+    Pg_min = zeros(F, T+T_hr);
     # battery
     B_rate=3;
     R_rate=1/3;
-    B_max = ones(F,1)*B_rate*ones(1,T)/12;
-    B_min = zeros(F,T);
+    B_max = ones(F,1)*B_rate*ones(1,T+T_hr)/12;
+    B_min = zeros(F,T+T_hr);
     R_max = R_rate*B_max;
     R_min = -R_max;
-    W=zeros(F,T);
+
+
+    W=zeros(F,T+T_hr);
     # ancillary
     if ancillary_type == "10min"
         tau=2;
@@ -24,19 +26,19 @@ function GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf)
     else
         tau=2;
     end
-    P_rsrv_min=zeros(1,T);
+    P_rsrv_min=zeros(1,T+T_hr);
     k=12;
 
     delta_t = 1/12;
-    S=35*ones(1,T);
+    S=35*ones(1,T+T_hr);
     # V
     Base_V=69;
     V_min = Base_V*0.96;
     V_max = Base_V*1.06;
 
     # impedance
-    r=[0.13275; 0.13275; 0.199125];
-    x=[1.00426; 1.00426; 1.50639];
+    r=repeat(reshape([0.13275; 0.13275; 0.199125],3,1), ceil(Int, BN/3),1);
+    x=repeat(reshape([1.00426; 1.00426; 1.50639],3,1), ceil(Int, BN/3),1);
     # penalty
     beta=-15;
     # println("===== GML - finish building boundaries =====")
@@ -101,7 +103,7 @@ price, ancillary_type);
 
 
 
-    m = Model(with_optimizer(Mosek.Optimizer, QUIET=true, MSK_DPAR_INTPNT_CO_TOL_REL_GAP=1e-3,
+    m = Model(with_optimizer(Mosek.Optimizer, QUIET=false, MSK_DPAR_INTPNT_CO_TOL_REL_GAP=1e-3,
     MSK_DPAR_INTPNT_CO_TOL_MU_RED=1e-3))
     # define the real-time variables
     # Feeder level
@@ -216,6 +218,72 @@ price, ancillary_type);
             @constraint(m, V_min_0^2<=v_0[scenario,t]);
             @constraint(m, V_max_0^2>=v_0[scenario,t]);
             @constraint(m, sum(Q_hat[scenario,:,t])<=0.05*sum(P_hat[scenario,:,t]));
+        end
+    end
+
+
+    # println(" ---- Stochastic Constraint Buildup")
+    T_hr = 24-ceil(Int, T/12);
+    @variable(m, Pg_hr[1:SN, 1:F, 1:T_hr]); # the real power output
+    @variable(m, Qf_hr[1:SN, 1:F, 1:T_hr]); # the real power output
+    @variable(m, B_hr[1:SN, 1:F, 1:T_hr]); # the storage
+    @variable(m, R_hr[1:SN, 1:F, 1:T_hr]);# the charge/discharge rate
+    # bank level
+    @variable(m, P_hat_hr[1:SN, 1:BN, 1:T_hr]);# the total delivered power on line
+    @variable(m, Q_hat_hr[1:SN, 1:BN, 1:T_hr]);# the total delivered reactive on line
+    @variable(m, l_hr[1:SN, 1:BN, 1:T_hr]);# current square
+    @variable(m, v_hr[1:SN, 1:BN, 1:T_hr]);# voltage
+    @variable(m, v_0_hr[1:SN,1:T_hr]);# voltage for P0
+    @variable(m, P_hr[1:SN, 1:BN, 1:T_hr]); # power distributed from bank
+    @variable(m, Q_hr[1:SN, 1:BN, 1:T_hr]); # reactive power distributed from bank
+
+    for scenario = 1:SN
+        for t=1:T_hr
+            for feeder=1:F
+                @constraint(m, Pg_min[feeder, t+T]<=Pg_hr[scenario, feeder ,t]);
+                @constraint(m, Pg_hr[scenario, feeder ,t]<=
+                    pg.pred_hr[feeder,t]);
+                @constraint(m, B_min[feeder,t+T] <= B_hr[scenario,feeder,t]);
+                @constraint(m, B_hr[scenario,feeder,t]<= B_max[feeder,t+T]);
+                @constraint(m, R_min[feeder,t+T] <= R_hr[scenario,feeder,t]);
+                @constraint(m, R_hr[scenario,feeder,t]<= R_max[feeder,t+T]);
+                if t==1
+                    @constraint(m, B_hr[scenario,feeder,1] == B[scenario, feeder,T-1]-delta_t*R[scenario,feeder,T-1])
+                else
+                    @constraint(m, B_hr[scenario,feeder,t] ==
+                        B_hr[scenario,feeder,t-1] - R_hr[scenario,feeder,t-1])
+                end
+                @constraint(m, Qf_min[feeder,t+T] <= Qf_hr[scenario,feeder,t]);
+                @constraint(m, Qf_hr[scenario,feeder,t]<= Qf_max[feeder,t+1]);
+            end
+            for bank=1:BN
+                temp_Pg = Pg_hr[scenario,TB[bank][1],t];
+                temp_R = R_hr[scenario,TB[bank][1],t];
+                temp_Qf = Qf_hr[scenario,TB[bank][1],t];
+                for feeder_ite = 2:length(TB[bank])
+                    temp_Pg = temp_Pg +Pg_hr[scenario,TB[bank][feeder_ite],t];
+                    temp_R = temp_R+R_hr[scenario,TB[bank][feeder_ite],t];
+                    temp_Qf = temp_Qf+Qf_hr[scenario,TB[bank][feeder_ite],t];
+                end
+                @constraint(m, P_hr[scenario,bank,t]==
+                    sum(pd.pred_hr[TB[bank][1]:TB[bank][end],t])
+                    -temp_Pg-temp_R);
+                @constraint(m, Q_hr[scenario,bank,t]==temp_Qf);
+                @constraint(m, [0.5*S[1,t+T], S[1,t+T], P_hr[scenario,bank,t], Q_hr[scenario,bank,t]] in RotatedSecondOrderCone());
+                @constraint(m,P_hat_hr[scenario,bank,t]==
+                    r[bank]*l_hr[scenario,bank,t]+P_hr[scenario,bank,t]);
+                @constraint(m,Q_hat[scenario,bank,t]==
+                    x[bank]*l_hr[scenario,bank,t]+Q_hr[scenario,bank,t]);
+                @constraint(m,v_hr[scenario,bank,t]==v_0_hr[scenario,t]+
+                    (r[bank]^2+x[bank]^2)*l_hr[scenario,bank,t]-
+                    2*(r[bank]*P_hat_hr[scenario,bank,t]+x[bank]*Q_hat_hr[scenario,bank,t]));
+                @constraint(m, [0.5*l_hr[scenario,bank,t], v_0_hr[scenario,t], P_hat_hr[scenario,bank,t], Q_hat_hr[scenario,bank,t]] in RotatedSecondOrderCone());
+                @constraint(m, V_min^2<=v_hr[scenario,bank,t]);
+                @constraint(m, V_max^2>=v_hr[scenario,bank,t]);
+            end
+            @constraint(m, V_min_0^2<=v_0_hr[scenario,t]);
+            @constraint(m, V_max_0^2>=v_0_hr[scenario,t]);
+            @constraint(m, sum(Q_hat_hr[scenario,:,t])<=0.05*sum(P_hat_hr[scenario,:,t]));
         end
     end
     ###########################################################################
@@ -354,7 +422,7 @@ price, ancillary_type);
             fn_cost_RHC_anc(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,P_rsrv_rt,P_rsrv,price,pg,pd,beta,SN,obj))
     else
         @objective(m, Min,
-            fn_cost_RHC_rt(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,price,pg,pd,beta,SN,obj))
+            fn_cost_RHC_rt(delta_t,P_hat_rt,P_hat,P_hat_hr, Pg_rt,Pg,Pg_hr,price,pg,pd,beta,SN,obj))
     end
     status=optimize!(m);
 
@@ -366,21 +434,31 @@ price, ancillary_type);
     println(string("    ----Solve Time: ", time_solve))
     println(string("    ----Optimal Cost: ", cost_o))
     ## obtaining value
-    Pg_rt_o=JuMP.value.(Pg_rt)
-    Pg_s=JuMP.value.(Pg)
-    Pg_total = hcat(Pg_rt_o, Pg_s[1,:,:])
-    R_rt_o=JuMP.value.(R_rt)
-    R_s=JuMP.value.(R[1,:,:])
-    R_total = hcat(R_rt_o, R_s)
+    Qf_o=JuMP.value.(Qf_rt)
+    Pg_o=JuMP.value.(Pg_rt)
+    B_o=JuMP.value.(B_rt)
+    R_o=JuMP.value.(R_rt)
+    P_hat_o=JuMP.value.(P_hat_rt)
+    Q_hat_o=JuMP.value.(Q_hat_rt)
+    l_o=JuMP.value.(l_rt)
+    v_o=JuMP.value.(v_rt)
     if ancillary_type == "10min" || ancillary_type == "30min"
         P_rsrv_o=JuMP.value(P_rsrv_rt);
+        B_rsrv_o=JuMP.value(B_rsrv_rt);
         P_rsrv_s=JuMP.value.(P_rsrv);
-        P_rsrv_total = hcat([P_rsrv_o], P_rsrv_s);
+        B_rsrv_s=JuMP.value.(B_rsrv);
     else
-        P_rsrv_total = zeros(1,T);
+        P_rsrv_o = 0;
+        B_rsrv_o = 0;
     end
-    val_opt = (Pg = (Pg_total), R=(R_total), P_rsrv = (P_rsrv_total),
-        Cost = (cost_o), Solve_time=(time_solve))
+    P_0_o=sum(P_hat_o)
+    cost_o=P_0_o*price.lambda_rt/12;
+    Pf_o=zeros(F,1)
+    for feeder = 1:F
+        Pf_o[feeder,1]=Pd[feeder,1]-Pg_o[feeder,1]-R_o[feeder,1]
+    end
+
+    val_opt = Optimization_output_struct(Pf_o, Qf_o, Pg_o, B_o, R_o, P_hat_o, Q_hat_o, l_o, v_o, P_rsrv_o, B_rsrv_o, P_0_o, cost_o, time_solve)
     return val_opt
 end
 
@@ -389,20 +467,22 @@ function fn_cost_RHC_anc(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,P_rsrv_rt,P_rsrv,price,
     # println("    ---- Load the optimal function")
     T=obj.T;
     icdf = obj.icdf;
-    sum_prob = 1
-    P_hat_scenario=sum(P_hat[1, :, :], dims=1);
+    sum_prob = sum(price.probability[1:SN])
+    P_hat_scenario=
+        price.probability[1]/sum_prob*sum(P_hat[1, :, :], dims=1);
     Cost_P_hat_scenario = P_hat_scenario*reshape(price.lambda_scenario[1, :],T-1,1);
-    Pg_diff_scenario=sum(Pg_rt[:,1])-sum(pg.mu_rt)+sum(Pg[1, :, :]);
-    # if SN>1
-    #     for scenario = 2:SN
-    #         P_hat_scenario=P_hat_scenario+
-    #             price.probability[scenario]/sum_prob*sum(P_hat[scenario, :, :], dims=1);
-    #         Cost_P_hat_scenario=Cost_P_hat_scenario+price.probability[scenario]/sum_prob*sum(P_hat[scenario, :, :], dims=1)*
-    #             reshape(price.lambda_scenario[scenario, :],T-1,1);
-    #         Pg_diff_scenario = Pg_diff_scenario+
-    #             price.probability[scenario]/sum_prob*sum(Pg[scenario, :, :]);
-    #     end
-    # end
+    Pg_diff_scenario=sum(Pg_rt[:,1])-sum(pg.mu_rt)+
+        price.probability[1]/sum_prob*sum(Pg[1, :, :]);
+    if SN>1
+        for scenario = 2:SN
+            P_hat_scenario=P_hat_scenario+
+                price.probability[scenario]/sum_prob*sum(P_hat[scenario, :, :], dims=1);
+            Cost_P_hat_scenario=Cost_P_hat_scenario+price.probability[scenario]/sum_prob*sum(P_hat[scenario, :, :], dims=1)*
+                reshape(price.lambda_scenario[scenario, :],T-1,1);
+            Pg_diff_scenario = Pg_diff_scenario+
+                price.probability[scenario]/sum_prob*sum(Pg[scenario, :, :]);
+        end
+    end
 
     Pg_diff_scenario = Pg_diff_scenario-
         sum(positive_array(icdf.*sqrt.(pd.sigma+pg.sigma)+pg.mu_scenario));
@@ -420,30 +500,52 @@ function fn_cost_RHC_anc(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,P_rsrv_rt,P_rsrv,price,
         delta_t*price.alpha_rt*P_rsrv_rt-(delta_t*Cost_P_rsrv_scenario)[1,1];
 end
 
-function fn_cost_RHC_rt(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,price,pg,pd,beta,SN,obj)
+function fn_cost_RHC_rt(delta_t,P_hat_rt,P_hat,P_hat_hr, Pg_rt,Pg,Pg_hr,price,pg,pd,beta,SN,obj)
 
     # println("    ---- Load the optimal function")
     T=obj.T;
     icdf = obj.icdf;
-    sum_prob = 1
-    P_hat_scenario=sum(P_hat[1, :, :], dims=1);
+    sum_prob = sum(price.probability[1:SN])
+    P_hat_scenario=
+        price.probability[1]/sum_prob*sum(P_hat[1, :, :], dims=1);
     Cost_P_hat_scenario = P_hat_scenario*reshape(price.lambda_scenario[1, :],T-1,1);
-    Pg_diff_scenario=sum(Pg_rt[:,1])-sum(pg.mu_rt)+sum(Pg[1, :, :]);
-    # if SN>1
-    #     for scenario = 2:SN
-    #         P_hat_scenario=P_hat_scenario+
-    #             price.probability[scenario]/sum_prob*sum(P_hat[scenario, :, :], dims=1);
-    #         Cost_P_hat_scenario=Cost_P_hat_scenario+price.probability[scenario]/sum_prob*sum(P_hat[scenario, :, :], dims=1)*
-    #             reshape(price.lambda_scenario[scenario, :],T-1,1);
-    #         Pg_diff_scenario = Pg_diff_scenario+
-    #             price.probability[scenario]/sum_prob*sum(Pg[scenario, :, :]);
-    #     end
-    # end
+    Pg_diff_scenario=sum(Pg_rt[:,1])-sum(pg.mu_rt)+
+        price.probability[1]/sum_prob*sum(Pg[1, :, :]);
+    if SN>1
+        for scenario = 2:SN
+            P_hat_scenario=P_hat_scenario+
+                price.probability[scenario]/sum_prob*sum(P_hat[scenario, :, :], dims=1);
+            Cost_P_hat_scenario=Cost_P_hat_scenario+price.probability[scenario]/sum_prob*sum(P_hat[scenario, :, :], dims=1)*
+                reshape(price.lambda_scenario[scenario, :],T-1,1);
+            Pg_diff_scenario = Pg_diff_scenario+
+                price.probability[scenario]/sum_prob*sum(Pg[scenario, :, :]);
+        end
+    end
     Pg_diff_scenario = Pg_diff_scenario-
         sum(positive_array(icdf.*sqrt.(pd.sigma+pg.sigma)+pg.mu_scenario));
+
+    T_hr = 24-ceil(Int, T/12);
+    P_hat_hr_ave=
+        price.probability[1]/sum_prob*sum(P_hat_hr[1, :, :], dims=1);
+    Cost_P_hat_hr = P_hat_hr_ave*reshape(price.lambda_hr[1, :],T_hr,1);
+    Pg_diff_hr=price.probability[1]/sum_prob*sum(Pg_hr[1, :, :]);
+    if SN>1
+        for scenario = 2:SN
+            P_hat_hr_ave=P_hat_hr_ave+
+                price.probability[scenario]/sum_prob*sum(P_hat_hr[scenario, :, :], dims=1);
+            Cost_P_hat_hr=Cost_P_hat_hr+price.probability[scenario]/sum_prob*sum(P_hat_hr[scenario, :, :], dims=1)*
+                reshape(price.lambda_hr[scenario, :],T_hr,1);
+            Pg_diff_hr = Pg_diff_hr+
+                price.probability[scenario]/sum_prob*sum(Pg_hr[scenario, :, :]);
+        end
+    end
+    Pg_diff_hr = Pg_diff_hr-
+        sum(positive_array(pg.pred_hr));
+
     println("    ----Case: Real-time Balancing")
     return delta_t*price.lambda_rt*sum(P_hat_rt[:,1])+(delta_t*Cost_P_hat_scenario)[1,1]+
-        delta_t*beta*Pg_diff_scenario
+        delta_t*beta*Pg_diff_scenario+
+        Cost_P_hat_hr[1,1]+beta*Pg_diff_scenario
 end
 
 
@@ -465,19 +567,20 @@ function positive_scalar(Scalar_)
     return Scalar_
 end
 
-function write_output_out(val_opt, current_time)
+function write_output_out(val_opt, current_time, F)
         # write the solar file
     println("===== GML - Write Output File");
     name=string("results/Time", current_time, ".csv");
-    cost = repeat([val_opt.cost], 12, 1)
-    time = repeat([val_opt.time], 12, 1)
-    p_rsrv = repeat([val_opt.P_rsrv], 12, 1)
+    cost = repeat([val_opt.cost], F, 1)
+    time = repeat([val_opt.time], F, 1)
+    P_0 = repeat([val_opt.P_0], F, 1)
+    p_rsrv = repeat([val_opt.P_rsrv], F, 1)
     global feeder_num=[string("feeder",1)]
-    for i=2:12
+    for i=2:F
         feeder_num=vcat(feeder_num, string("feeder",i))
     end
-    RT_data_feeder=hcat(feeder_num, val_opt.Pf, val_opt.Qf, val_opt.Pg, val_opt.B,val_opt.R, p_rsrv, cost, time)
-    CSV.write(name, DataFrame(RT_data_feeder, [:Feeder, :Pf, :QF, :Pg, :B, :R, :P_rsrv, :Cost, :time]));
+    RT_data_feeder=hcat(feeder_num, val_opt.Pf, val_opt.Qf, val_opt.Pg, val_opt.B,val_opt.R, p_rsrv, P_0, cost, time)
+    CSV.write(name, DataFrame(RT_data_feeder, [:Feeder, :Pf, :QF, :Pg, :B, :R, :P_rsrv, :P_0, :Cost, :time]));
     # println("    ---- Finish writting files! ")
 end
 
