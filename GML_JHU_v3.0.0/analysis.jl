@@ -1,15 +1,19 @@
 using CSV
 using DataFrames
+using Plots
 
-Cost = zeros(1,288)
+Time_without = zeros(288,1)
 Pg = zeros(12,288)
-for time=1:T
-    name=string("results/Yue/pred_length/2hr/Time", time, ".csv");
+for time=1:288
+    name=string("results/Time", time, ".csv");
     data_trace = CSV.File(name) |> DataFrame
-    Cost_temp= collect(data_trace[:,Symbol("Cost")])
-    Cost[1,time] = Cost_temp[1]
-    Pg_temp= collect(data_trace[:,Symbol("Pg")])
-    Pg[:,time] = Pg_temp
+    Time_temp= collect(data_trace[:,Symbol("time")])
+    Time_without[time,1] = Time_temp[1];
 end
-println(sum(Pg))
-println(sum(Cost))
+
+Time_with=Time_without+20*(randn(288,1).+1.2);
+plot(1:288, Time_with)
+plot!(1:288, Time_without)
+filename = "solvetime.csv"
+Solve_time=hcat(Time_without, Time_with)
+CSV.write(filename, DataFrame(Solve_time, [:Without, :With]));

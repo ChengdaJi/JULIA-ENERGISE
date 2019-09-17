@@ -9,12 +9,13 @@ using MosekTools
 using CSV
 using DataFrames
 using Plots
+using Statistics
 
 include("traj_gen_det.jl")
 include("GML_struct.jl")
 include("GML_RHC.jl")
 ## sys para
-ancillary_type="without"
+ancillary_type="10min"
 # ancillary_type="30min"
 # ancillary_type="Without"
 # # of timeslots
@@ -29,7 +30,7 @@ SN=1;
 
 ################################################################################
 # penetation level
-p_rate=0.75; # 0.25 0.5 0.75 1
+p_rate=1; # 0.25 0.5 0.75 1
 
 # deterministic
 icdf = 0;
@@ -57,7 +58,7 @@ pd_noise = matread("../data/demand_noise.mat")["demand_noise"];
 pg_raw = read_solar_data()
 # #
 current_time=1;
-ct_printout = string("===== GML - At Time ", current_time);
+ct_printout = string("===== Deterministic ", current_time);
 println("=================================================")
 println(ct_printout)
 P_rsrv_feedback = [];
@@ -67,6 +68,11 @@ feedback = (B_feedback=(B_feedback), P_rsrv_feedback=(P_rsrv_feedback));
 price = price_traj_det(current_time, ancillary_type, price_raw, T);
 pd = pd_traj_det(current_time, pd_raw, T)
 pg = pg_traj_det(current_time, pg_raw, p_rate, T);
+# println(var((pd.da-pd.traj)))
+# p
+# temp=((pg.da-pg.mu)./pg.mu)
+# println(var(temp))
+
 obj = GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf);
 val_opt = optimal_stoach_scenario(current_time, obj, feedback, pd, pg,
 price, ancillary_type);
@@ -76,7 +82,7 @@ println(string("Total avaliability is ", sum(pg_aval)));
 println(string("Total demand is ", sum(pd.traj)));
 println(string("Total solar is ", sum(val_opt.Pg)));
 # write_output_out(val_opt, current_time)
-# println("=================================================")
+println("=================================================")
 
 
 

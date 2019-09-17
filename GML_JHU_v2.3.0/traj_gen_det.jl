@@ -21,19 +21,22 @@ end
 function pd_traj_det(t, pd_raw, T)
     # this function generates the demand trajectory
     traj=pd_raw.pd_rt[:, t:t+T-1];
+    da=pd_raw.pd_da[:,t:t+T-1];
     sigma = zeros(12, T-1);
     # pd = pd_struct(traj, sigma);
-    pd = pd_struct(traj, sigma);
+    pd = (da=(da), traj=(traj), sigma=(sigma));
     return pd
 end
 
 function pg_traj_det(t, pg_raw, p_rate, T);
     rt_raw = p_rate*pg_raw.pg_rt;
+    da_raw = p_rate*pg_raw.pg_da;
     mu = rt_raw[:,t:t+T-1];
+    da = da_raw[:,t:t+T-1];
     mu_rt = rt_raw[:,t];
     mu_scenario=rt_raw[:,t+1:t+T-1];
     sigma = zeros(12,T-1)
     # pg=pg_struct(mu,mu_rt,mu_scenario,sigma);
-    pg=pg_struct(mu,mu_rt,mu_scenario,sigma);
+    pg=(da=(da),mu=(mu),mu_rt=(mu_rt),mu_scenario=(mu_scenario),sigma=(sigma));
     return pg
 end

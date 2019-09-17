@@ -14,7 +14,7 @@ include("traj_gen.jl")
 include("GML_struct.jl")
 include("GML_RHC.jl")
 ## sys para
-ancillary_type="without"
+ancillary_type="10min"
 # ancillary_type="30min"
 # ancillary_type="Without"
 # # of timeslots
@@ -52,18 +52,10 @@ delta_rt_raw=matread("../data/price_prediction.mat");
 pd_raw = read_demand_data()
 pd_noise = matread("../data/demand_noise.mat")["demand_noise"];
 
-
-
-if solar_error_max == 0.025
-    pg_noise = matread("../data/solar_noise_0025.mat")["solar_noise"];
-elseif solar_error_max == 0.05
-    pg_noise = matread("../data/solar_noise_005.mat")["solar_noise"];
-elseif solar_error_max == 0.1
-    pg_noise = matread("../data/solar_noise_01.mat")["solar_noise"];
-end
+pg_noise = matread("../data/solar_noise_0025.mat")["solar_noise"];
 pg_raw = read_solar_data()
 # #
-for current_time=1:T
+for current_time=1:1
     ct_printout = string("===== GML - At Time ", current_time);
     println("=================================================")
     println(ct_printout)

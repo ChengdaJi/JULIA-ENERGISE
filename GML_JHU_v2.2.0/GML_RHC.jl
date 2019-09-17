@@ -361,10 +361,10 @@ price, ancillary_type);
     println(string("    ----", termination_status(m)))
     # println(MOI.PrimalStatus())
     # println(MOI.DualStatus())
-    cost_o = JuMP.objective_value(m);
+    cost_printout = JuMP.objective_value(m);
     time_solve=MOI.get(m, MOI.SolveTime());
     println(string("    ----Solve Time: ", time_solve))
-    println(string("    ----Optimal Cost: ", cost_o))
+    println(string("    ----Optimal Cost: ", cost_printout))
     ## obtaining value
     Qf_o=JuMP.value.(Qf_rt)
     Pg_o=JuMP.value.(Pg_rt)
@@ -384,7 +384,12 @@ price, ancillary_type);
         B_rsrv_o = 0;
     end
     P_0_o=sum(P_hat_o)
-    cost_o=P_0_o*price.lambda_rt/12;
+    if ancillary_type == "without"
+        cost_o=P_0_o*price.lambda_rt/12 - beta*(sum(Pg_o.-pg.mu_rt))/12;
+    elseif ancillary_type == "10min" || ancillary_type == "30min"
+        cost_o=P_0_o*price.lambda_rt/12 - beta*(sum(Pg_o)-sum(pg.mu_rt))/12-
+        delta_t*price.alpha_rt*P_rsrv_o;
+    end
     Pf_o=zeros(F,1)
     for feeder = 1:F
         Pf_o[feeder,1]=Pd[feeder,1]-Pg_o[feeder,1]-R_o[feeder,1]
@@ -482,7 +487,7 @@ end
 function write_output_out(val_opt, current_time)
         # write the solar file
     println("===== GML - Write Output File");
-    name=string("results/Chengda/Solar0025Time", current_time, ".csv");
+    name=string("results/Solar0025Time", current_time, ".csv");
     cost = repeat([val_opt.cost], 12, 1)
     time = repeat([val_opt.time], 12, 1)
     P_0 = repeat([val_opt.P_0], 12, 1)

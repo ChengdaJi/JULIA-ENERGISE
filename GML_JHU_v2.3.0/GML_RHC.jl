@@ -9,7 +9,7 @@ function GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf)
     # minimum solar
     Pg_min = zeros(F, T);
     # battery
-    B_rate=3;
+    B_rate=200;
     R_rate=1/3;
     B_max = ones(F,1)*B_rate*ones(1,T)/12;
     B_min = zeros(F,T);

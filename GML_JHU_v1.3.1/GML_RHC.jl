@@ -221,7 +221,7 @@ price, ancillary_type);
                     @constraint(m, B[feeder,1] == B_rt[feeder,1]-delta_t*R_rt[feeder,1])
                 else
                     @constraint(m, B[feeder,t] ==
-                        B[feeder,t-1] - R[feeder,t-1]*delta_t)
+                        B[feeder,t-1] - delta_t*R[feeder,t-1])
                 end
                 @constraint(m, Qf_min[feeder,t+1] <= Qf[feeder,t]);
                 @constraint(m, Qf[feeder,t]<= Qf_max[feeder,t+1]);
@@ -282,6 +282,7 @@ price, ancillary_type);
     Pg_o_s=JuMP.value.(Pg)
     R_o_s=JuMP.value.(R)
     v_o_s=JuMP.value.(v)
+    B_o_s=JuMP.value.(B)
 
 
     # Pg_s = JuMP.value.(Pg);
@@ -310,21 +311,24 @@ price, ancillary_type);
     Pg_opt = zeros(1,6);
     Qf_opt = zeros(1,6);
     v_opt = zeros(1,6);
+    B_opt = zeros(1,6);
     println(size(R_o))
     for FOL_num = 1:FOL_Horizon
         if FOL_num ==1
             R_opt[1, FOL_num]=R_o[1,FOL_num];
+            B_opt[1, FOL_num]=B_o[1,FOL_num];
             Pg_opt[1, FOL_num]=Pg_o[1,FOL_num];
             Qf_opt[1, FOL_num]=Qf_o[1,FOL_num];
             v_opt[1, FOL_num]=sqrt(v_o[1,FOL_num]);
         else
-            R_opt[1, FOL_num]=R_o_s[1,FOL_num];
-            Pg_opt[1, FOL_num]=Pg_o_s[1,FOL_num];
-            Qf_opt[1, FOL_num]=Qf_o_s[1,FOL_num];
-            v_opt[1, FOL_num]=sqrt(v_o_s[1,FOL_num]);
+            R_opt[1, FOL_num]=R_o_s[1,FOL_num-1];
+            B_opt[1, FOL_num]=B_o_s[1,FOL_num-1];
+            Pg_opt[1, FOL_num]=Pg_o_s[1,FOL_num-1];
+            Qf_opt[1, FOL_num]=Qf_o_s[1,FOL_num-1];
+            v_opt[1, FOL_num]=sqrt(v_o_s[1,FOL_num-1]);
         end
     end
-    val_opt = (R=(R_opt), Pg=(Pg_opt), Qf=(Qf_opt), v=(v_opt))
+    val_opt = (B=(B_opt), R=(R_opt), Pg=(Pg_opt), Qf=(Qf_opt), v=(v_opt))
     # val_opt = Optimization_output_struct(Pf_o, Qf_o, Pg_o, B_o, R_o, P_hat_o, Q_hat_o, l_o, v_o, P_rsrv_o, B_rsrv_o, P_0_o, cost_o, time_solve)
     return val_opt
 end
