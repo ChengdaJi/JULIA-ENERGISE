@@ -96,8 +96,8 @@ price, ancillary_type);
     for tb_index=1:BN
         push!(TB, (tb_index-1)*4+1:tb_index*4)
     end
-    V_min_0=69*0.96;
-    V_max_0=69*1.04;
+    V_min_0=V_min;
+    V_max_0=V_max;
 
 
 
@@ -135,7 +135,7 @@ price, ancillary_type);
     for bank=1:BN
         @constraint(m, P_rt[bank,1]==
             sum(Pd[TB[bank][1]:TB[bank][end],1])-
-            sum(Pg_rt[TB[bank][feeder],1]-R_rt[TB[bank][feeder],1] for feeder=1:4));
+            sum(Pg_rt[TB[bank][feeder],1]+R_rt[TB[bank][feeder],1] for feeder=1:4));
         @constraint(m, Q_rt[bank,1]==sum(Qf_rt[TB[bank][feeder_ite],1] for feeder_ite=1:4));
         @constraint(m, [0.5*S[1,1], S[1,1], P_rt[bank,1], Q_rt[bank,1]] in RotatedSecondOrderCone());
         @constraint(m,P_hat_rt[bank,1]==

@@ -318,10 +318,10 @@ price, ancillary_type);
             Qf_opt[1, FOL_num]=Qf_o[1,FOL_num];
             v_opt[1, FOL_num]=sqrt(v_o[1,FOL_num]);
         else
-            R_opt[1, FOL_num]=R_o_s[1,FOL_num];
-            Pg_opt[1, FOL_num]=Pg_o_s[1,FOL_num];
-            Qf_opt[1, FOL_num]=Qf_o_s[1,FOL_num];
-            v_opt[1, FOL_num]=sqrt(v_o_s[1,FOL_num]);
+            R_opt[1, FOL_num]=R_o_s[1,FOL_num-1];
+            Pg_opt[1, FOL_num]=Pg_o_s[1,FOL_num-1];
+            Qf_opt[1, FOL_num]=Qf_o_s[1,FOL_num-1];
+            v_opt[1, FOL_num]=sqrt(v_o_s[1,FOL_num-1]);
         end
     end
     val_opt = (R=(R_opt), Pg=(Pg_opt), Qf=(Qf_opt), v=(v_opt))

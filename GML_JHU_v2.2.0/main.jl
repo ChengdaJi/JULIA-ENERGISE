@@ -14,7 +14,7 @@ include("traj_gen.jl")
 include("GML_struct.jl")
 include("GML_RHC.jl")
 ## sys para
-ancillary_type="without"
+ancillary_type="10min"
 # ancillary_type="30min"
 # ancillary_type="Without"
 # # of timeslots

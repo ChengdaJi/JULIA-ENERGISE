@@ -135,7 +135,7 @@ price, ancillary_type);
     for bank=1:BN
         @constraint(m, P_rt[bank,1]==
             sum(Pd[TB[bank][1]:TB[bank][end],1])-
-            sum(Pg_rt[TB[bank][feeder],1]-R_rt[TB[bank][feeder],1] for feeder=1:4));
+            sum(Pg_rt[TB[bank][feeder],1]+R_rt[TB[bank][feeder],1] for feeder=1:4));
         @constraint(m, Q_rt[bank,1]==sum(Qf_rt[TB[bank][feeder_ite],1] for feeder_ite=1:4));
         @constraint(m, [0.5*S[1,1], S[1,1], P_rt[bank,1], Q_rt[bank,1]] in RotatedSecondOrderCone());
         @constraint(m,P_hat_rt[bank,1]==
@@ -361,10 +361,10 @@ price, ancillary_type);
     println(string("    ----", termination_status(m)))
     # println(MOI.PrimalStatus())
     # println(MOI.DualStatus())
-    cost_o = JuMP.objective_value(m);
+    cost_total = JuMP.objective_value(m);
     time_solve=MOI.get(m, MOI.SolveTime());
     println(string("    ----Solve Time: ", time_solve))
-    println(string("    ----Optimal Cost: ", cost_o))
+    println(string("    ----Optimal Cost: ", cost_total))
     ## obtaining value
     Qf_o=JuMP.value.(Qf_rt)
     Pg_o=JuMP.value.(Pg_rt)
@@ -374,6 +374,7 @@ price, ancillary_type);
     Q_hat_o=JuMP.value.(Q_hat_rt)
     l_o=JuMP.value.(l_rt)
     v_o=JuMP.value.(v_rt)
+    v_0_o=JuMP.value.(v_0_rt)
     if ancillary_type == "10min" || ancillary_type == "30min"
         P_rsrv_o=JuMP.value(P_rsrv_rt);
         B_rsrv_o=JuMP.value(B_rsrv_rt);
@@ -384,14 +385,19 @@ price, ancillary_type);
         B_rsrv_o = 0;
     end
     P_0_o=sum(P_hat_o)
-    cost_o=P_0_o*price.lambda_rt/12;
+    cost_o=P_0_o*price.lambda_rt/12-
+        (beta*sum(pg.mu_rt[:,1])-sum(Pg_o[:,1]))/12-
+        price.alpha_rt*P_rsrv_o/12;
     Pf_o=zeros(F,1)
     for feeder = 1:F
         Pf_o[feeder,1]=Pd[feeder,1]-Pg_o[feeder,1]-R_o[feeder,1]
     end
 
-    val_opt = Optimization_output_struct(Pf_o, Qf_o, Pg_o, B_o, R_o, P_hat_o, Q_hat_o, l_o, v_o, P_rsrv_o, B_rsrv_o, P_0_o, cost_o, time_solve)
-    return val_opt
+    val_opt = (Pf = (Pf_o), Qf=(Qf_o), Pg = (Pg_o), B=(B_o), R=(R_o), P_hat = (P_hat_o), Q_hat = (Q_hat_o),
+    l = (l_o), v = (v_o), v_0=(v_0_o), P_rsrv = (P_rsrv_o), B_rsrv = (B_rsrv_o), P_0 = (P_0_o),
+    cost=(cost_o), time = (time_solve))
+    # Optimization_output_struct(Pf_o, Qf_o, Pg_o, B_o, R_o, P_hat_o, Q_hat_o, l_o, v_o, P_rsrv_o, B_rsrv_o, P_0_o, cost_o, time_solve)
+    # return val_opt
 end
 
 function fn_cost_RHC_anc(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,P_rsrv_rt,P_rsrv,price,pg,pd,beta,SN,obj)
@@ -482,17 +488,30 @@ end
 function write_output_out(val_opt, current_time)
         # write the solar file
     println("===== GML - Write Output File");
-    name=string("results/Chengda/Solar0025Time", current_time, ".csv");
+    name=string("results/BaselineTime", current_time, ".csv");
     cost = repeat([val_opt.cost], 12, 1)
     time = repeat([val_opt.time], 12, 1)
     P_0 = repeat([val_opt.P_0], 12, 1)
     p_rsrv = repeat([val_opt.P_rsrv], 12, 1)
+    B_rsrv = repeat([val_opt.B_rsrv], 12, 1)
+    v_0 = zeros(12,1)
+    v_0[1]=val_opt.v_0[1,1]
+    v=zeros(12,1)
+    v[1:3]=val_opt.v
+    # v = [val_opt.v, zeros(9,1)]
+    l=zeros(12,1)
+    l[1:3]=val_opt.l;
+    l = [val_opt.l; zeros(9,1)]
+    P_hat=zeros(12,1)
+    P_hat[1:3]=val_opt.P_hat;
+    Q_hat=zeros(12,1)
+    Q_hat[1:3]=val_opt.Q_hat;
     global feeder_num=[string("feeder",1)]
     for i=2:12
         feeder_num=vcat(feeder_num, string("feeder",i))
     end
-    RT_data_feeder=hcat(feeder_num, val_opt.Pf, val_opt.Qf, val_opt.Pg, val_opt.B,val_opt.R, p_rsrv, P_0, cost, time)
-    CSV.write(name, DataFrame(RT_data_feeder, [:Feeder, :Pf, :QF, :Pg, :B, :R, :P_rsrv, :P_0, :Cost, :time]));
+    RT_data_feeder=hcat(feeder_num, val_opt.Pf, val_opt.Qf, val_opt.Pg, val_opt.B,val_opt.R, p_rsrv, B_rsrv, P_0, cost, time, v_0, v, l, P_hat, Q_hat)
+    CSV.write(name, DataFrame(RT_data_feeder, [:Feeder, :Pf, :QF, :Pg, :B, :R, :P_rsrv, :B_rsrv, :P_0, :Cost, :time, :v_0, :v, :l, :P_hat, :Q_hat]));
     # println("    ---- Finish writting files! ")
 end
 

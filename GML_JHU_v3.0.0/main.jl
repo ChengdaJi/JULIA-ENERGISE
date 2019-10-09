@@ -63,7 +63,7 @@ elseif solar_error_max == 0.1
 end
 pg_raw = read_solar_data()
 # #
-for current_time=1:1
+for current_time=1:288
     if mod(current_time,12) == 0
         T=1+Pred_length
     else
