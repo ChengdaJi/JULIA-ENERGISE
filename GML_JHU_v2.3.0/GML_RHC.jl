@@ -1,4 +1,4 @@
-function GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf)
+function GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf,B_input)
 
     println("===== GML - Boundaries Buildup");
     ###############################################################################
@@ -9,7 +9,7 @@ function GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf)
     # minimum solar
     Pg_min = zeros(F, T);
     # battery
-    B_rate=200;
+    B_rate=B_input;
     R_rate=1/3;
     B_max = ones(F,1)*B_rate*ones(1,T)/12;
     B_min = zeros(F,T);
@@ -28,7 +28,7 @@ function GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf)
     k=12;
 
     delta_t = 1/12;
-    S=35*ones(1,T);
+    S=1000*ones(1,T);
     # V
     Base_V=69;
     V_min = Base_V*0.96;
@@ -96,8 +96,8 @@ price, ancillary_type);
     for tb_index=1:BN
         push!(TB, (tb_index-1)*4+1:tb_index*4)
     end
-    V_min_0=69*0.96;
-    V_max_0=69*1.04;
+    V_min_0=V_min;
+    V_max_0=V_max;
 
 
 
@@ -133,9 +133,10 @@ price, ancillary_type);
     end
 
     for bank=1:BN
+        # println(string("demand ", sum(Pd[TB[bank][1]:TB[bank][end],1])))
         @constraint(m, P_rt[bank,1]==
             sum(Pd[TB[bank][1]:TB[bank][end],1])-
-            sum(Pg_rt[TB[bank][feeder],1]-R_rt[TB[bank][feeder],1] for feeder=1:4));
+            sum(Pg_rt[TB[bank][feeder],1]+R_rt[TB[bank][feeder],1] for feeder=1:4));
         @constraint(m, Q_rt[bank,1]==sum(Qf_rt[TB[bank][feeder_ite],1] for feeder_ite=1:4));
         @constraint(m, [0.5*S[1,1], S[1,1], P_rt[bank,1], Q_rt[bank,1]] in RotatedSecondOrderCone());
         @constraint(m,P_hat_rt[bank,1]==
@@ -145,12 +146,12 @@ price, ancillary_type);
         @constraint(m,v_rt[bank,1]==v_0_rt[1,1]+
             (r[bank]^2+x[bank]^2)*l_rt[bank,1]-
             2*(r[bank]*P_hat_rt[bank,1]+x[bank]*Q_hat_rt[bank,1]));
-        @constraint(m, [0.5*l_rt[bank,1], v_0_rt[1,1], P_hat_rt[bank,1], Q_hat_rt[bank,1]] in RotatedSecondOrderCone());
+        # @constraint(m, [0.5*l_rt[bank,1], v_0_rt[1,1], P_hat_rt[bank,1], Q_hat_rt[bank,1]] in RotatedSecondOrderCone());
         @constraint(m, V_min^2<= v_rt[bank,1]);
         @constraint(m, v_rt[bank,1]<= V_max^2);
     end
-    @constraint(m, v_0_rt[1,1]>=V_min^2);
-    @constraint(m, v_0_rt[1,1]<=V_max^2);
+    @constraint(m, v_0_rt[1,1]>=V_min_0^2);
+    @constraint(m, v_0_rt[1,1]<=V_max_0^2);
     @constraint(m, sum(Q_hat_rt)<=0.05*sum(P_hat_rt));
 
 
@@ -209,7 +210,7 @@ price, ancillary_type);
                 @constraint(m,v[scenario,bank,t]==v_0[scenario,t]+
                     (r[bank]^2+x[bank]^2)*l[scenario,bank,t]-
                     2*(r[bank]*P_hat[scenario,bank,t]+x[bank]*Q_hat[scenario,bank,t]));
-                @constraint(m, [0.5*l[scenario,bank,t], v_0[scenario,t], P_hat[scenario,bank,t], Q_hat[scenario,bank,t]] in RotatedSecondOrderCone());
+                # @constraint(m, [0.5*l[scenario,bank,t], v_0[scenario,t], P_hat[scenario,bank,t], Q_hat[scenario,bank,t]] in RotatedSecondOrderCone());
                 @constraint(m, V_min^2<=v[scenario,bank,t]);
                 @constraint(m, V_max^2>=v[scenario,bank,t]);
             end
@@ -369,9 +370,30 @@ price, ancillary_type);
     Pg_rt_o=JuMP.value.(Pg_rt)
     Pg_s=JuMP.value.(Pg)
     Pg_total = hcat(Pg_rt_o, Pg_s[1,:,:])
+
     R_rt_o=JuMP.value.(R_rt)
     R_s=JuMP.value.(R[1,:,:])
     R_total = hcat(R_rt_o, R_s)
+
+    Qf_rt_o=JuMP.value.(Qf_rt)
+
+    P_bank = JuMP.value.(P_rt)
+    l_rt_o = JuMP.value.(l_rt)
+    v_0_rt_o= JuMP.value.(v_0_rt)
+    P_hat_rt_o= JuMP.value.(P_hat_rt)
+    Q_hat_rt_o= JuMP.value.(Q_hat_rt)
+    println("============================================")
+    println(string("current square ",l_rt_o[1]))
+    println(string("voltage square ",v_0_rt_o[1]))
+    println(string("P line ", P_hat_rt_o[1]))
+    println(string("Q line ", Q_hat_rt_o[1]))
+    println(string("Demand bank ", sum(Pd[i, 1] for i=1:4)))
+    println(string("Solar bank ", sum(Pg_rt_o[i, 1] for i=1:4)))
+    println(string("P bank ", sum(Pd[i, 1]-R_rt_o[i]-Pg_rt_o[i, 1] for i=1:4)))
+    println(string("P bank ", sum(P_bank[1])))
+    println(string("Q bank", sum(Qf_rt_o[i] for i=1:4)))
+    println("============================================")
+
     if ancillary_type == "10min" || ancillary_type == "30min"
         P_rsrv_o=JuMP.value(P_rsrv_rt);
         P_rsrv_s=JuMP.value.(P_rsrv);

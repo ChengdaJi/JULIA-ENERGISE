@@ -15,9 +15,9 @@ include("GML_struct.jl")
 include("GML_RHC.jl")
 ## sys para
 # current time slot 1~288
-current_time = 71
+current_time = 73
 # Battery SOC
-B_input = 0.473683012697716;
+B_input = 0.475;
 # run the GML_RHC_DEG function
 GML_setpoint = GML_RHC_DET(current_time, B_input)
 # Optimal battery discharge
