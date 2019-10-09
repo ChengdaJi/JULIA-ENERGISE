@@ -49,9 +49,9 @@ function GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf)
     # minimum solar
     Pg_min = zeros(F, T);
     # battery
-    B_max = ones(F,1)*ones(1,T)*0.5;
+    B_max = ones(F,1)*ones(1,T)*0.475;
     B_min = zeros(F,T);
-    R_max = 2.325*ones(F,T);
+    R_max = 2.208*ones(F,T);
     R_min = -R_max;
     W=zeros(F,T);
     # ancillary
@@ -174,7 +174,7 @@ price, ancillary_type);
     for bank=1:BN
         @constraint(m, P_rt[bank,1]==
             sum(Pd[TB[bank][1]:TB[bank][end],1])-
-            sum(Pg_rt[TB[bank][feeder],1]-R_rt[TB[bank][feeder],1] for feeder=1:4));
+            sum(Pg_rt[TB[bank][feeder],1]+R_rt[TB[bank][feeder],1] for feeder=1:4));
         @constraint(m, Q_rt[bank,1]==sum(Qf_rt[TB[bank][feeder_ite],1] for feeder_ite=1:4));
         @constraint(m, [0.5*S[1,1], S[1,1], P_rt[bank,1], Q_rt[bank,1]] in RotatedSecondOrderCone());
         @constraint(m,P_hat_rt[bank,1]==
@@ -221,7 +221,7 @@ price, ancillary_type);
                     @constraint(m, B[feeder,1] == B_rt[feeder,1]-delta_t*R_rt[feeder,1])
                 else
                     @constraint(m, B[feeder,t] ==
-                        B[feeder,t-1] - R[feeder,t-1]*delta_t)
+                        B[feeder,t-1] - delta_t*R[feeder,t-1])
                 end
                 @constraint(m, Qf_min[feeder,t+1] <= Qf[feeder,t]);
                 @constraint(m, Qf[feeder,t]<= Qf_max[feeder,t+1]);

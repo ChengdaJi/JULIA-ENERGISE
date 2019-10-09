@@ -30,12 +30,11 @@ SN=1;
 
 ################################################################################
 # penetation level
-Solar_pene=[1]; # 0.25 0.5 0.75 1
+Solar_pene=[0.25 0.5 0.75 1]; # 0.25 0.5 0.75 1
 
 # deterministic
 icdf = 0;
-# Battery_sizes = [3 15 30];
-Battery_sizes = [3];
+Battery_sizes = [3 15 30];
 #
 ################################################################################
 
@@ -65,11 +64,7 @@ for p_rate in Solar_pene
         ct_printout = string("===== Solar ", p_rate, " Battery ", B_input);
         println("=================================================")
         println(ct_printout)
-        if current_time == 1
-            P_rsrv_feedback = []
-        else
-            P_rsrv_feedback = zeros(current_time-1,1);
-        end
+        P_rsrv_feedback = [];
         B_feedback=reshape([0.0910,0.0942,0.1434,0.1402,0.1382,0.2144,0.1192,0.1813,
                 0.1355,0.0664,0.1182,0.0580],12,1);
         feedback = (B_feedback=(B_feedback), P_rsrv_feedback=(P_rsrv_feedback));

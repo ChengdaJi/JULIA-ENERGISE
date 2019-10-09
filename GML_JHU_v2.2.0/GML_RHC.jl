@@ -361,10 +361,17 @@ price, ancillary_type);
     println(string("    ----", termination_status(m)))
     # println(MOI.PrimalStatus())
     # println(MOI.DualStatus())
+<<<<<<< HEAD
     cost_total = JuMP.objective_value(m);
     time_solve=MOI.get(m, MOI.SolveTime());
     println(string("    ----Solve Time: ", time_solve))
     println(string("    ----Optimal Cost: ", cost_total))
+=======
+    cost_printout = JuMP.objective_value(m);
+    time_solve=MOI.get(m, MOI.SolveTime());
+    println(string("    ----Solve Time: ", time_solve))
+    println(string("    ----Optimal Cost: ", cost_printout))
+>>>>>>> 1a3d0e7dd8a6cda1ef76c7475a78ec89947a1e02
     ## obtaining value
     Qf_o=JuMP.value.(Qf_rt)
     Pg_o=JuMP.value.(Pg_rt)
@@ -385,9 +392,18 @@ price, ancillary_type);
         B_rsrv_o = 0;
     end
     P_0_o=sum(P_hat_o)
+<<<<<<< HEAD
     cost_o=P_0_o*price.lambda_rt/12-
         (beta*sum(pg.mu_rt[:,1])-sum(Pg_o[:,1]))/12-
         price.alpha_rt*P_rsrv_o/12;
+=======
+    if ancillary_type == "without"
+        cost_o=P_0_o*price.lambda_rt/12 - beta*(sum(Pg_o.-pg.mu_rt))/12;
+    elseif ancillary_type == "10min" || ancillary_type == "30min"
+        cost_o=P_0_o*price.lambda_rt/12 - beta*(sum(Pg_o)-sum(pg.mu_rt))/12-
+        delta_t*price.alpha_rt*P_rsrv_o;
+    end
+>>>>>>> 1a3d0e7dd8a6cda1ef76c7475a78ec89947a1e02
     Pf_o=zeros(F,1)
     for feeder = 1:F
         Pf_o[feeder,1]=Pd[feeder,1]-Pg_o[feeder,1]-R_o[feeder,1]
@@ -488,7 +504,11 @@ end
 function write_output_out(val_opt, current_time)
         # write the solar file
     println("===== GML - Write Output File");
+<<<<<<< HEAD
     name=string("results/BaselineTime", current_time, ".csv");
+=======
+    name=string("results/Solar0025Time", current_time, ".csv");
+>>>>>>> 1a3d0e7dd8a6cda1ef76c7475a78ec89947a1e02
     cost = repeat([val_opt.cost], 12, 1)
     time = repeat([val_opt.time], 12, 1)
     P_0 = repeat([val_opt.P_0], 12, 1)
