@@ -30,8 +30,8 @@ SN=1;
 
 ################################################################################
 # penetation level
-Solar_pene=[1]; # 0.25 0.5 0.75 1
-
+Solar_pene=[0.75]; # 0.25 0.5 0.75 1
+# Solar_pene=[0.25]
 # deterministic
 icdf = 0;
 # Battery_sizes = [3 15 30];
@@ -80,17 +80,25 @@ for p_rate in Solar_pene
         # p
         # temp=((pg.da-pg.mu)./pg.mu)
         # println(var(temp))
-
-        obj = GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf, B_input);
-        val_opt = optimal_stoach_scenario(current_time, obj, feedback, pd, pg,
-        price, ancillary_type);
-        pg_aval = sum(pg.mu, dims=1)
-        println(string("Solar Utlizing rate ", sum(val_opt.Pg)/sum(pg_aval)));
-        println(string("Total avaliability is ", sum(pg_aval)));
-        println(string("Total demand is ", sum(pd.traj)));
-        println(string("Total solar is ", sum(val_opt.Pg)));
-        # write_output_out(val_opt, current_time)
-        println("=================================================")
+        if B_input ==0
+            pd_net = sum(pd.traj, dims =1).-sum(pg.mu, dims =1);
+            lambda=zeros(288,1)
+            lambda[1]=price.lambda_rt
+            lambda[2:288]=price.lambda_scenario[1,:]
+            cost = pd_net*lambda/12
+            println(string("Baseline cost ", cost[1,1]))
+        else
+            obj = GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf, B_input);
+            val_opt = optimal_stoach_scenario(current_time, obj, feedback, pd, pg,
+            price, ancillary_type);
+            pg_aval = sum(pg.mu, dims=1)
+            println(string("Solar Utlizing rate ", sum(val_opt.Pg)/sum(pg_aval)));
+            println(string("Total avaliability is ", sum(pg_aval)));
+            println(string("Total demand is ", sum(pd.traj)));
+            println(string("Total solar is ", sum(val_opt.Pg)));
+            # write_output_out(val_opt, current_time)
+            println("=================================================")
+        end
     end
 end
 

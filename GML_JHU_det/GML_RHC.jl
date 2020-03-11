@@ -28,7 +28,7 @@ function GML_Sys_Ava(T, F, BN, SN, pd, ancillary_type, icdf,B_input)
     k=12;
 
     delta_t = 1/12;
-    S=1000*ones(1,T);
+    S=35*ones(1,T);
     # V
     Base_V=69;
     V_min = Base_V*0.96;
@@ -124,7 +124,7 @@ price, ancillary_type);
     # println(" ---- Real Time Constraint Buildup ")
     for feeder=1:F
         @constraint(m, 0<=Pg_rt[feeder,1]);
-        @constraint(m, pg.mu_rt[feeder,1]>=Pg_rt[feeder,1]);
+        @constraint(m, pg.mu_rt[feeder,1]==Pg_rt[feeder,1]);
         @constraint(m, R_min[feeder,1]<= R_rt[feeder,1]);
         @constraint(m, R_rt[feeder,1]<= R_max[feeder,1]);
         @constraint(m, B_rt[feeder,1]==B_feedback[feeder,1]);
@@ -146,13 +146,13 @@ price, ancillary_type);
         @constraint(m,v_rt[bank,1]==v_0_rt[1,1]+
             (r[bank]^2+x[bank]^2)*l_rt[bank,1]-
             2*(r[bank]*P_hat_rt[bank,1]+x[bank]*Q_hat_rt[bank,1]));
-        # @constraint(m, [0.5*l_rt[bank,1], v_0_rt[1,1], P_hat_rt[bank,1], Q_hat_rt[bank,1]] in RotatedSecondOrderCone());
+        @constraint(m, [0.5*l_rt[bank,1], v_0_rt[1,1], P_hat_rt[bank,1], Q_hat_rt[bank,1]] in RotatedSecondOrderCone());
         @constraint(m, V_min^2<= v_rt[bank,1]);
         @constraint(m, v_rt[bank,1]<= V_max^2);
     end
     @constraint(m, v_0_rt[1,1]>=V_min_0^2);
     @constraint(m, v_0_rt[1,1]<=V_max_0^2);
-    @constraint(m, sum(Q_hat_rt)<=0.05*sum(P_hat_rt));
+    # @constraint(m, sum(Q_hat_rt)<=0.05*sum(P_hat_rt));
 
 
 
@@ -174,7 +174,7 @@ price, ancillary_type);
         for t=1:T-1
             for feeder=1:F
                 @constraint(m, Pg_min[feeder, t]<=Pg[scenario, feeder ,t]);
-                @constraint(m, Pg[scenario, feeder ,t]<=
+                @constraint(m, Pg[scenario, feeder ,t]==
                     positive_scalar(icdf*sqrt(pd.sigma[feeder,t]+pg.sigma[feeder,t])+pg.mu_scenario[feeder,t]));
                 @constraint(m, B_min[feeder,t+1] <= B[scenario,feeder,t]);
                 @constraint(m, B[scenario,feeder,t]<= B_max[feeder,t+1]);
@@ -210,13 +210,13 @@ price, ancillary_type);
                 @constraint(m,v[scenario,bank,t]==v_0[scenario,t]+
                     (r[bank]^2+x[bank]^2)*l[scenario,bank,t]-
                     2*(r[bank]*P_hat[scenario,bank,t]+x[bank]*Q_hat[scenario,bank,t]));
-                # @constraint(m, [0.5*l[scenario,bank,t], v_0[scenario,t], P_hat[scenario,bank,t], Q_hat[scenario,bank,t]] in RotatedSecondOrderCone());
+                @constraint(m, [0.5*l[scenario,bank,t], v_0[scenario,t], P_hat[scenario,bank,t], Q_hat[scenario,bank,t]] in RotatedSecondOrderCone());
                 @constraint(m, V_min^2<=v[scenario,bank,t]);
                 @constraint(m, V_max^2>=v[scenario,bank,t]);
             end
             @constraint(m, V_min_0^2<=v_0[scenario,t]);
             @constraint(m, V_max_0^2>=v_0[scenario,t]);
-            @constraint(m, sum(Q_hat[scenario,:,t])<=0.05*sum(P_hat[scenario,:,t]));
+            # @constraint(m, sum(Q_hat[scenario,:,t])<=0.05*sum(P_hat[scenario,:,t]));
         end
     end
     ###########################################################################
@@ -382,17 +382,17 @@ price, ancillary_type);
     v_0_rt_o= JuMP.value.(v_0_rt)
     P_hat_rt_o= JuMP.value.(P_hat_rt)
     Q_hat_rt_o= JuMP.value.(Q_hat_rt)
-    println("============================================")
-    println(string("current square ",l_rt_o[1]))
-    println(string("voltage square ",v_0_rt_o[1]))
-    println(string("P line ", P_hat_rt_o[1]))
-    println(string("Q line ", Q_hat_rt_o[1]))
-    println(string("Demand bank ", sum(Pd[i, 1] for i=1:4)))
-    println(string("Solar bank ", sum(Pg_rt_o[i, 1] for i=1:4)))
-    println(string("P bank ", sum(Pd[i, 1]-R_rt_o[i]-Pg_rt_o[i, 1] for i=1:4)))
-    println(string("P bank ", sum(P_bank[1])))
-    println(string("Q bank", sum(Qf_rt_o[i] for i=1:4)))
-    println("============================================")
+    # println("============================================")
+    # println(string("current square ",l_rt_o[1]))
+    # println(string("voltage square ",v_0_rt_o[1]))
+    # println(string("P line ", P_hat_rt_o[1]))
+    # println(string("Q line ", Q_hat_rt_o[1]))
+    # println(string("Demand bank ", sum(Pd[i, 1] for i=1:4)))
+    # println(string("Solar bank ", sum(Pg_rt_o[i, 1] for i=1:4)))
+    # println(string("P bank ", sum(Pd[i, 1]-R_rt_o[i]-Pg_rt_o[i, 1] for i=1:4)))
+    # println(string("P bank ", sum(P_bank[1])))
+    # println(string("Q bank", sum(Qf_rt_o[i] for i=1:4)))
+    # println("============================================")
 
     if ancillary_type == "10min" || ancillary_type == "30min"
         P_rsrv_o=JuMP.value(P_rsrv_rt);
@@ -437,6 +437,7 @@ function fn_cost_RHC_anc(delta_t,P_hat_rt,P_hat,Pg_rt,Pg,P_rsrv_rt,P_rsrv,price,
             Cost_P_rsrv_scenario = Cost_P_rsrv_scenario+reshape(P_rsrv_scenario, 1, T-1)*reshape(price.alpha_scenario[scenario, :],T-1,1);;
         end
     end
+    # println("Pg different");
     return delta_t*price.lambda_rt*sum(P_hat_rt[:,1])+(delta_t*Cost_P_hat_scenario)[1,1]+
         delta_t*beta*Pg_diff_scenario-
         delta_t*price.alpha_rt*P_rsrv_rt-(delta_t*Cost_P_rsrv_scenario)[1,1];
