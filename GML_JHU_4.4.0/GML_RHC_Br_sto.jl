@@ -513,7 +513,7 @@ function optimal_stoach_scenario_large(current_time, obj, feedback, pd, pg, pric
 end
 
 function optimal_stoach_scenario_large_con(current_time, obj, feedback, pd, pg, price, ancillary_type, base, network)
-    println("===== GML - Optimization ")
+    println("===== GML - Optimization N-1")
 
     #################
     #  F,T or BN, T #

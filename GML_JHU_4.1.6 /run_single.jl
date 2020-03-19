@@ -19,11 +19,11 @@ include("GML_Networkbuildup.jl")
 # # of timeslots
 T=288;
 # # of secnarios
-SN=6;
+SN=1;
 
 
 # ====================================================================
-M_list=[1];
+M_list=[15];
 # multiplier=1;
 # ====================================================================
 ################################################################################
@@ -31,7 +31,7 @@ M_list=[1];
 # Ancillar Markets Considered: "without", "10min", "30min"
 ancillary_type = "10min"
 # penetation levels
-p_rate_list = [0.25 0.5 0.75 1]; #[0.25, 0.5, 0.75, 1];
+p_rate_list = [1]; #[0.25, 0.5, 0.75, 1];
 # p_rate = [0.25];
 
 # [90.95,99]
@@ -79,12 +79,17 @@ for multiplier in M_list
 	BN = length(network.bus[:,1]);
 
 	for p_rate in p_rate_list
-		GML_large(ancillary_type, T, BN, SN,
+		data = GML_large(ancillary_type, T, BN, SN,
 		    p_rate, icdf, pred_length, solar_error_max, B_cap,
 		    price_raw, delta_rt_raw, pd_raw, pd_noise, pg_noise, pg_raw,
 		    base, multiplier, network);
 	end
 end
+
+plot(1:288, reshape(sum(data.pd, dims=1),288,1), label="pd", linewidth=2)
+plot!(1:288, reshape(sum(data.pg, dims=1),288,1), label="pd", linewidth=2)
+
+CSV.write("pg.csv", DataFrame(reshape(sum(data.pg, dims=1),288,1), [:pg_aval]))
 
 # plot(1:288, reshape(val_opt.lambda1,288,1), label="lambda1", linewidth=2)
 # plot!(1:288, reshape(sum(pd.traj, dims=1)*100,288,1), label="Pd", linewidth=2)

@@ -5,22 +5,25 @@ function GML_large_emergency(ancillary_type, T, BN, SN,
     tau = 2;
     k=12;
     # current_time=1
-    for current_time=1:T
-    # current_time=9
+    for current_time=T_emergency:T
+    # current_time=1
         ct_printout = string("===== GML - At Time ", current_time);
         println("=================================================")
         println(ct_printout)
-        if current_time == 1
-            P_rsrv_feedback = [];
-            B_feedback_one = vcat(zeros(3,1), B_cap/12*ones(12,1));
-            B_feedback = vcat(0, repeat(B_feedback_one, multiplier));
+        if current_time == T_emergency
+            old_feedback = read_old_data(T_emergency,multiplier)
+            B_feedback = old_feedback.B_feedback
+            P_rsrv_feedback = old_feedback.P_rsrv_feedback
+            # P_rsrv_feedback = [];
+            # B_feedback_one = vcat(zeros(3,1), B_cap/12*ones(12,1));
+            # B_feedback = vcat(0, repeat(B_feedback_one, multiplier));
         else
             B_feedback = read_B_out()
             P_rsrv_feedback = read_RSRV_out()
         end
 
 
-        price = price_traj_alt(current_time, ancillary_type,
+        price = price_traj(current_time, ancillary_type,
             price_raw, delta_rt_raw, T, pred_length);
 
         pd = pd_traj_large(current_time, pd_raw, pd_noise, T, pred_length, base,multiplier);

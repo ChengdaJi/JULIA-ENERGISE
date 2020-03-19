@@ -1,6 +1,6 @@
 function optimal_stoach_scenario_large_con_relax(current_time, obj, feedback, pd, pg,
     price, ancillary_type, base, network, T_emergency)
-    println("===== GML - Optimization ")
+    println("===== GML - Optimization N-1 Relax")
 
     #################
     #  F,T or BN, T #
@@ -232,10 +232,10 @@ function optimal_stoach_scenario_large_con_relax(current_time, obj, feedback, pd
                 end
             end
             @constraint(m, B_rsrv_rt==floor(delta_t*temp_f_rsrv_c_fb*1000)/1000)
-            # println("nominal B_rsrv")
-            # println(floor(delta_t*temp_f_rsrv_c_fb*1000)/1000)
-            # println("sum B_feedback")
-            # println(sum(B_feedback))
+            println("nominal B_rsrv")
+            println(floor(delta_t*temp_f_rsrv_c_fb*1000)/1000)
+            println("sum B_feedback")
+            println(sum(B_feedback))
         end
         # for Bus = 2:BN
         #     list = setdiff(Real_Bus_list, Bus)

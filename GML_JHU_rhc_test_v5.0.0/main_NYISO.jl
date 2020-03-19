@@ -22,25 +22,25 @@ data_trace_branch=CSV.File("../data/NYISO-data/branch.csv") |> DataFrame
 data_trace_gen=CSV.File("../data/NYISO-data/gen.csv") |> DataFrame
 
 # sys para
-ancillary_type="10min"
+# ancillary_type="10min"
 # ancillary_type="30min"
-# ancillary_type="Without"
+ancillary_type="without"
 # # of timeslots
 T=288;
 # # of bus
-NoShunt=209;
+# NoShunt=209;
 # # of secnarios
 SN=1;
 
 baseMVA = 100;
 ################################################################################
 # penetation level
-Solar_pene=[0]; # 0.25 0.5 0.75 1
+# Solar_pene=[0]; # 0.25 0.5 0.75 1
 # Solar_pene=[0.25]
 # deterministic
 icdf = 0;
 # Battery_sizes = [3 15 30];
-Battery_sizes = [3];
+# Battery_sizes = [3];
 #
 solar_error_max = 0;
 ################################################################################
@@ -101,8 +101,14 @@ end
 B_feedback=zeros(NoBus, 1);
 feedback = (B_feedback=(B_feedback), P_rsrv_feedback=(P_rsrv_feedback));
 price = price_traj_det(current_time, ancillary_type, price_raw, T);
+
 # plot(1:288, reshape(price.lambda_scenario[1,:], 288,1), label="lambda")
-# plot(1:288, reshape(price.alpha_scenario[1,:], 288,1), label="alpha")
+# plot!(1:288, reshape(price.alpha_scenario[1,:], 288,1), label="alpha")
+# lambda = reshape(price.lambda_scenario[1,:], 288,1)
+# alpha = reshape(price.alpha_scenario[1,:], 288,1)
+# price = hcat(lambda, alpha)
+# CSV.write("price.csv", DataFrame(price, [:lambda, :alpha]))
+
 # println(sum(price.alpha_scenario[1,:]))
 pd = pd_traj_pu_det(current_time, pd_raw, T,  NoBus, baseMVA)
 # println(sum(pd.traj, dims=2))
@@ -121,8 +127,13 @@ pg = pg_traj_pu_det(current_time, pg_raw, p_rate, T, NoBus, baseMVA);
 
 obj = GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, bus_struct,
     shunt_struct, branch_struct, gen_struct, baseMVA);
-# global val_opt = optimal_NYISO(NoShunt, SN, current_time, obj, ancillary_type,
-#     feedback, pd, pg, price, shunt_struct, bus_struct, branch_struct, gen_struct);
+B_feedback = zeros(NoBus, 1)
+# P_rsrv_feedback = [];
+# feedback = (B_feedback=(B_feedback ),P_rsrv_feedback=(P_rsrv_feedback));
+#
+
+val_opt = optimal_NYISO(SN, current_time, obj, ancillary_type, baseMVA,
+    feedback, pd, pg, price, shunt_struct, bus_struct, branch_struct, gen_struct);
 #     pg_aval = sum(pg.mu, dims=1)
 #     println(string("Solar Utlizing rate ", sum(val_opt.Pg)/sum(pg_aval)));
 #     println(string("Total avaliability is ", sum(pg_aval)));

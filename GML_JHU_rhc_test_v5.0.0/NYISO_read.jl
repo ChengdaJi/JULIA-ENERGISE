@@ -1,4 +1,4 @@
-function shunt_data(data_trace_bus,data_trace_shunt)
+    function shunt_data(data_trace_bus,data_trace_shunt)
     # data_trace_bus=CSV.File("../data/NYISO-data/bus.csv") |> DataFrame
     baseKV_bus = collect(data_trace_bus[:,Symbol("baseKV")]);
     # data_trace_shunt=CSV.File("../data/NYISO-data/shunt.csv") |> DataFrame
@@ -27,7 +27,7 @@ function shunt_data(data_trace_bus,data_trace_shunt)
 end
 
 function bus_data(data_trace_bus)
-    # data_trace_bus=CSV.File("../data/NYISO-data/bus.csv") |> DataFrame
+    # data_trace_bus=CSV.File("./data/NYISO-data/bus.csv") |> DataFrame
     baseKV = collect(data_trace_bus[:,Symbol("baseKV")]);
     kind = collect(data_trace_bus[:,Symbol("kind")]);
     # data_trace_shunt=CSV.File("../data/NYISO-data/shunt.csv") |> DataFrame

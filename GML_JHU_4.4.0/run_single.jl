@@ -17,11 +17,12 @@ include("GML_RHC_Br_sto.jl")
 include("GML_Networkbuildup.jl")
 include("GML_RHC_Emergency.jl")
 include("optimal_stoach_scenario_large_con_relax.jl")
+include("read_old_data.jl")
 
 # # of timeslots
 T=288;
 # # of secnarios
-SN=6;
+SN=1;
 
 
 # ====================================================================
@@ -33,7 +34,7 @@ M_list=[1];
 # Ancillar Markets Considered: "without", "10min", "30min"
 ancillary_type = "10min"
 # penetation levels
-p_rate_list = [0.25 0.5 0.75 1]; #[0.25, 0.5, 0.75, 1];
+p_rate_list = [1]; #[0.25, 0.5, 0.75, 1];
 # p_rate_list = [1];
 
 # [90.95,99]

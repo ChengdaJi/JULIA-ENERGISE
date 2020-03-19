@@ -118,8 +118,55 @@ function pd_traj_large(t, pd_raw, pd_noise,T, Pred_length, base, mult)
     traj = vcat(zeros(1,288), traj_bus)
     ct=vcat(0, ct_bus);
 
-    pd = (traj=(traj/base.MVA), sigma = (sigma/(base.MVA)/base.MVA),
-    ct=(ct/base.MVA))
+    pd = (
+        traj = (traj/base.MVA),
+        sigma = (sigma/(base.MVA)/base.MVA),
+        ct = (ct/base.MVA))
+    return pd
+end
+
+function pd_traj_large_det(t, pd_raw, pd_noise,T, Pred_length, base, mult)
+    # println(mult)
+    # this function generates the demand trajectory
+    rt=pd_raw.pd_rt[:,t];
+    # pred = zeros(12*mult, Pred_length)
+    # for feeder=1:12*mult
+    #     # println(feeder)
+    #     feeder_noise = Int(feeder-12*floor((feeder-1)/12))
+    #     # println(feeder_noise)
+    #     pd_ratio = positive_array(pd_noise[feeder_noise][t,1:Pred_length].+1);
+    #     pred[feeder, :]=pd_raw.pd_rt[feeder,t+1:t+Pred_length].*pd_ratio;
+    # end
+    #
+    # da = pd_raw.pd_da[:,t+1+Pred_length:t+T];
+    # ratio = reshape(0.01:0.01/23:0.01/23*(Pred_length-1)+0.01, 1, Pred_length)
+    # pred_square = pred.^2;
+    #
+    # traj_bus = zeros(15*mult, 288);
+    # traj_feeder = hcat(pred, da);
+    # sigma_bus = zeros(15*mult, 288);
+    # sigma_feeder = hcat(ones(12*mult,1)*ratio, 0.08*da.^2);
+    # ct_bus = zeros(15*mult, 1);
+    # ct_feeder = pd_raw.pd_rt[:,t+1];
+    # for set = 1:mult
+    #     traj_bus[(set-1)*15+1:set*15,:]=vcat(
+    #         zeros(3,288),traj_feeder[(set-1)*12+1:set*12, :])
+    #     sigma_bus[(set-1)*15+1:set*15,:]=vcat(
+    #         zeros(3,288),sigma_feeder[(set-1)*12+1:set*12, :])
+    #     ct_bus[(set-1)*15+1:set*15]=vcat(
+    #         zeros(3,1), ct_feeder[(set-1)*12+1:set*12])
+    # end
+    #
+    # sigma = vcat(zeros(1,288), sigma_bus)
+    # traj = vcat(zeros(1,288), traj_bus)
+    # ct=vcat(0, ct_bus);
+    traj =pd_raw.pd_rt[:,t+1:t+288]
+    println(size(traj))
+    pd = (
+        traj=(traj/base.MVA),
+        sigma = (0),
+        ct=(pd_raw.pd_rt[:,t+1]/base.MVA)
+        )
     return pd
 end
 
@@ -169,5 +216,56 @@ function pg_traj_large(t, pg_raw, pg_noise, solar_error_max, p_rate, T,
     mu_ct=vcat(0, mu_ct_bus);
     # pg=pg_struct(mu,mu_rt,mu_scenario,sigma);
     pg=(mu=(mu/base.MVA),sigma=(sigma/(base.MVA)^2), mu_ct=(mu_ct/base.MVA));
+    return pg
+end
+
+function pg_traj_large_det(t, pg_raw, pg_noise, solar_error_max, p_rate, T,
+    Pred_length, base, mult)
+    rt_raw = p_rate*pg_raw.pg_rt;
+    da_raw = p_rate*pg_raw.pg_da;
+    # mu_rt = rt_raw[:,t];
+    # mu_ct = vcat(zeros(4,1),rt_raw[:,t+1]);
+    # pred = zeros(12*mult, Pred_length)
+    # traj025 = 0.01:(0.025-0.01)/(Pred_length-1):0.025
+    # traj = traj025.+(solar_error_max-0.01)
+    # for feeder=1:12*mult
+    #
+    #     feeder_noise = Int(feeder-12*floor((feeder-1)/12))
+    #     temp=sqrt.(traj./traj025);
+    #     temp1=temp.*pg_noise[feeder_noise][t,1:Pred_length];
+    #     # pg_ratio = positive_array(pg_noise[feeder][t,1:Pred_length].+1);
+    #     pg_ratio=positive_array(temp1.+1)
+    #     pred[feeder, :]=rt_raw[feeder,t+1:t+Pred_length].*pg_ratio;
+    # end
+    #
+    # da = da_raw[:,t+1+Pred_length:t+T];
+    # ratio = reshape(traj025.+(solar_error_max-0.01),1,Pred_length)
+    # pred_square = pred.^2;
+    #
+    # mu_bus = zeros(15*mult, 288);
+    # mu_feeder = hcat(pred, da);
+    # sigma_bus = zeros(15*mult, 288);
+    # sigma_feeder = hcat(
+    #     (ones(12*mult,1)*ratio).*pred_square, p_rate^2*2*solar_error_max*da.^2);
+    # # sigma_feeder = hcat(
+    # #     ones(12*mult,1)*ratio.*pred_square,
+    # #     p_rate^2*2*solar_error_max*ones(12*mult,T-Pred_length));
+    # mu_ct_bus = zeros(15*mult, 1);
+    # mu_ct_feeder = rt_raw[:,t+1];
+    # for set = 1:mult
+    #     mu_bus[(set-1)*15+1:set*15,:]=vcat(
+    #         zeros(3,288),mu_feeder[(set-1)*12+1:set*12, :])
+    #     sigma_bus[(set-1)*15+1:set*15,:]=vcat(
+    #         zeros(3,288),sigma_feeder[(set-1)*12+1:set*12, :])
+    #     mu_ct_bus[(set-1)*15+1:set*15]=vcat(
+    #         zeros(3,1), mu_ct_feeder[(set-1)*12+1:set*12])
+    # end
+    # sigma = vcat(zeros(1,288), sigma_bus)
+    # mu = vcat(zeros(1,288), mu_bus)
+    # mu_ct=vcat(0, mu_ct_bus);
+    # pg=pg_struct(mu,mu_rt,mu_scenario,sigma);
+    mu = rt_raw[:, t+1:t+288]
+    println(size(mu))
+    pg=(mu=(mu/base.MVA),sigma=(0), mu_ct=(0));
     return pg
 end

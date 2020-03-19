@@ -1,17 +1,24 @@
 function GML_large_emergency(ancillary_type, T, BN, SN,
     p_rate, icdf, pred_length, solar_error_max, B_cap,
     price_raw, delta_rt_raw, pd_raw, pd_noise, pg_noise, pg_raw,
-    base, multiplier, network, T_emergency, pcent_loss)
-
-    for current_time=1:T
+    base, multiplier, network, T_emergency, pcent_increse)
+    k=12;
+    for current_time=T_emergency:T
     # current_time=1
         ct_printout = string("===== GML - At Time ", current_time);
         println("=================================================")
         println(ct_printout)
-        if current_time == 1
-            P_rsrv_feedback = [];
+        if current_time == T_emergency
+            ################################
+            # old_feedback = read_old_data(T_emergency,multiplier)
+            # B_feedback = old_feedback.B_feedback
+            # P_rsrv_feedback = old_feedback.P_rsrv_feedback
+            ################################
+            # P_rsrv_feedback = [];
+            P_rsrv_feedback = zeros(1, T_emergency-1);
             B_feedback_one = vcat(zeros(3,1), B_cap/12*ones(12,1));
             B_feedback = vcat(0, repeat(B_feedback_one, multiplier));
+
         else
             B_feedback = read_B_out()
             P_rsrv_feedback = read_RSRV_out()
@@ -26,27 +33,32 @@ function GML_large_emergency(ancillary_type, T, BN, SN,
 
         pg = pg_traj_large(current_time, pg_raw, pg_noise,
             solar_error_max, p_rate, T, pred_length,  base, multiplier);
-        println(sum(pg.mu))
+        # println(sum(pg.mu))
 
-        if current_time >= T_emergency
-            mu_temp = (1-pcent_loss)*pg.mu
-            sigma_temp = pg.sigma
-            mu_ct_temp = pg.mu_ct
-            pg=(mu=(mu_temp ),sigma=(sigma_temp), mu_ct=(mu_ct_temp))
-            # println(sum(pg.mu))
-        end
         obj = GML_Sys_Ava_large(T, BN, SN, pd, ancillary_type, icdf,
-          B_cap, base, network)
+            B_cap, base, network)
 
-        val_opt = optimal_stoach_scenario_large(current_time, obj, feedback, pd, pg,
-            price, ancillary_type, base, network);
+        if current_time in T_emergency:T_emergency+k-1
+            # mu_temp = (1-pcent_increse)*pg.mu
+            # sigma_temp = pg.sigma
+            # mu_ct_temp = pg.mu_ct
+            # pg=(mu=(mu_temp ),sigma=(sigma_temp), mu_ct=(mu_ct_temp))
+            # # println(sum(pg.mu))
+            # val_opt = optimal_stoach_scenario_large(current_time, obj, feedback,
+            #     pd, pg, price, ancillary_type, base, network);
+            val_opt = optimal_stoach_scenario_large_solar(current_time, obj, feedback,
+                pd, pg, price, ancillary_type, base, network, pcent_increse);
+        else
+            val_opt = optimal_stoach_scenario_large(current_time, obj, feedback,
+                pd, pg, price, ancillary_type, base, network);
+        end
 
         IF_OP=string(val_opt.terminate_s)
         ############################
-        if IF_OP == "INFEASIBLE"
-            println(">>>>>>>>>>>>>>>>>>>")
-            break
-        end
+        # if IF_OP == "INFEASIBLE"
+        #     println(">>>>>>>>>>>>>>>>>>>")
+        #     break
+        # end
         ###########################
         B_feedback_out=zeros(BN,1)
         for bus = 1:BN
@@ -69,12 +81,13 @@ function GML_large_emergency(ancillary_type, T, BN, SN,
         end
         # println(B_feedback_out)
         # println(P_rsrv_feedback_temp)
+        B_5 = B_feedback_out[5,1]
         write_B_out(B_feedback_out)
         write_RSRV_out(P_rsrv_feedback_temp)
 
 
         mkpath("./result")
-        write_output_out(val_opt,P_rsrv_feed,
+        write_output_out(val_opt,P_rsrv_feed, B_5,
             string("./result/M", multiplier, "P_rate", p_rate, "Time", current_time, ".csv"))
     end
     # return val_opt

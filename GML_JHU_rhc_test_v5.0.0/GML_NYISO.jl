@@ -5,6 +5,7 @@ function GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, bus_struct,
     # shunt level
     T=288;
     NoBus = length(bus_struct.baseKV)
+    NoBr = length(branch_struct.id)
     Qf_max = zeros(NoBus,T)
     Qf_min = zeros(NoBus,T)
     for bus = 1:NoBus
@@ -60,17 +61,24 @@ function GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, bus_struct,
     # println(x)
     # # # penalty
     beta=-15;
+
+    C_ind = zeros(NoBus, NoBr)
+    for branch = 1:NoBr
+        C_ind[branch_struct.fbus[branch], branch]=1;
+        C_ind[branch_struct.tbus[branch], branch]=-1;
+    end
+    # println(C_ind)
     println("===== GML - finish building boundaries =====")
     obj=(T=(T), icdf = (icdf), Qf_max=(Qf_max), Qf_min=(Qf_min), Pg_min=(Pg_min),
     B_max=(B_max), B_min=(B_min), R_max=(R_max), R_min=(R_min),
     tau=(tau), P_rsrv_min=(P_rsrv_min), k=(k),V_max=(V_max), V_min=(V_min),
-    r=(r), x=(x), beta=(beta));
+    r=(r), x=(x), beta=(beta), C_ind=(C_ind));
 
     return obj
 end
 
-function optimal_NYISO(NoShunt, SN, current_time, obj, ancillary_type,
-    feedback, pd, pg, price, shunt_data, bus_data, branch_data, gen_data);
+function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
+    feedback, pd, pg, price, shunt_struct, bus_struct, branch_struct, gen_struct);
 
     println("===== GML - Optimization ")
     T=obj.T;
@@ -87,6 +95,7 @@ function optimal_NYISO(NoShunt, SN, current_time, obj, ancillary_type,
 
     delta_t = 1/12;; # time interval
     icdf = obj.icdf;
+    C_ind = obj.C_ind;
 
     # P_rsrv_max = obj.P_rsrv_max; # The maximum ancillary power
 
@@ -107,185 +116,441 @@ function optimal_NYISO(NoShunt, SN, current_time, obj, ancillary_type,
     B_feedback = feedback.B_feedback;
     P_rsrv_feedback = feedback.P_rsrv_feedback;
 
-    NoBus=length(bus_data.baseKV)
-    BrN=length(branch_data.fbus)
+    NoBus = length(bus_struct.baseKV)
+    NoBr = length(branch_struct.id)
+    NoGen = length(gen_struct.id)
     # NoGen=length(gen_data.id)
-    NoGen=9;
 
-    m = Model(with_optimizer(Mosek.Optimizer, QUIET=true, MSK_DPAR_INTPNT_CO_TOL_REL_GAP=1e-3,
+    m = Model(with_optimizer(Mosek.Optimizer, QUIET=true,
+    MSK_DPAR_INTPNT_CO_TOL_REL_GAP=1e-3,
     MSK_DPAR_INTPNT_CO_TOL_MU_RED=1e-3))
     # define the real-time variables
 
-    # Shunt level
-    @variable(m, Pg_rt[1:NoShunt, 1])
-    @variable(m, Qf_rt[1:NoShunt, 1])
-    @variable(m, B_rt[1:NoShunt, 1])
-    @variable(m, R_rt[1:NoShunt, 1])
     # Bus level
+    @variable(m, Pg_rt[1:NoBus, 1])
+    @variable(m, Qf_rt[1:NoBus, 1])
+    @variable(m, B_rt[1:NoBus, 1])
+    @variable(m, R_rt[1:NoBus, 1])
+
     @variable(m, P_bus_rt[1:NoBus, 1])
     @variable(m, Q_bus_rt[1:NoBus, 1])
     @variable(m, v_rt[1:NoBus, 1])
     # Branch level
-    @variable(m, P_br_rt[1:BrN, 1])
-    @variable(m, Q_br_rt[1:BrN, 1])
+    @variable(m, P_br_rt[1:NoBr, 1])
+    @variable(m, Q_br_rt[1:NoBr, 1])
 
     @variable(m, P_gen_rt[1:NoGen, 1])
     @variable(m, Q_gen_rt[1:NoGen, 1])
 
 
     # println(" ---- Real Time Constraint Buildup ")
-    for shunt=1:NoShunt
-        if shunt_data.type[shunt] == 1
-            shuntbMVA=shunt_struct.baseMVA[shunt]
-            @constraint(m, 0<=Pg_rt[shunt,1]);
-            @constraint(m, Pg_rt[shunt,1]<=
-                positive_scalar(icdf*sqrt(pd.sigma[shunt,1]+pg.sigma[shunt,1])/shuntbMVA
-                +pg.mu[shunt,1]/shuntbMVA));
-            @constraint(m, R_min[shunt,1]<= R_rt[shunt,1]);
-            @constraint(m, R_rt[shunt,1]<= R_max[shunt,1]);
-            @constraint(m, B_rt[shunt,1]==B_feedback[shunt,1]);
+    for bus=1:NoBus
+        @constraint(m, 0<=Pg_rt[bus,1]);
+        @constraint(m, Pg_rt[bus,1]<=
+            positive_scalar(icdf*sqrt(pd.sigma[bus,1]+pg.sigma[bus,1])
+            +pg.mu[bus,1]));
+        @constraint(m, R_min[bus,1]<= R_rt[bus,1]);
+        @constraint(m, R_rt[bus,1]<= R_max[bus,1]);
+        @constraint(m, B_rt[bus,1]==B_feedback[bus,1]);
+        @constraint(m, Qf_min[bus,1]<=Qf_rt[bus,1]);
+        @constraint(m, Qf_rt[bus,1]<=Qf_max[bus,1]);
+        @constraint(m, V_min^2<= v_rt[bus,1]);
+        @constraint(m, v_rt[bus,1]<= V_max^2);
+        add_branch_list = findall(one->one==1, C_ind[bus,:])
+        sub_branch_list = findall(minusone->minusone==-1, C_ind[bus,:])
+        @constraint(m, P_bus_rt[bus,1]==
+        -Pd[bus,1]
+        +Pg_rt[bus,1]+R_rt[bus,1]);
+
+        if bus_struct.type[bus]==1
+            if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
+
+                @constraint(m, P_bus_rt[bus,1]==
+                    sum(P_br_rt[branch,1] for branch in add_branch_list)
+                    -sum(P_br_rt[branch,1] for branch in sub_branch_list)
+                    );
+                @constraint(m, Q_bus_rt[bus,1]==
+                    sum(Q_br_rt[branch,1] for branch in add_branch_list)
+                    -sum(Q_br_rt[branch,1] for branch in sub_branch_list));
+            elseif ~isempty(add_branch_list) && isempty(sub_branch_list)
+
+                @constraint(m, P_bus_rt[bus,1]==
+                    sum(P_br_rt[branch,1] for branch in add_branch_list)
+                    );
+                @constraint(m, Q_bus_rt[bus,1]==
+                    sum(Q_br_rt[branch,1] for branch in add_branch_list));
+            elseif isempty(add_branch_list) && ~isempty(sub_branch_list)
+                @constraint(m, P_bus_rt[bus,1]==
+                    -sum(P_br_rt[branch,1] for branch in sub_branch_list)
+                    );
+                @constraint(m, Q_bus_rt[bus,1]==
+                    -sum(Q_br_rt[branch,1] for branch in sub_branch_list));
+            end
         else
-            @constraint(m, Pg_rt[shunt,1]==0);
-            @constraint(m, R_rt[shunt,1]==0);
-            @constraint(m, B_rt[shunt,1]==0);
+            gen_id = findall(bus_id ->bus_id == bus, gen_struct.bus);
+            if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
+
+                @constraint(m, P_bus_rt[bus,1]==
+                    sum(P_br_rt[branch,1] for branch in add_branch_list)
+                    -sum(P_br_rt[branch,1] for branch in sub_branch_list)
+                    -P_gen_rt[gen_id[1], 1]);
+                @constraint(m, Q_bus_rt[bus,1]==
+                    sum(Q_br_rt[branch,1] for branch in add_branch_list)
+                    -sum(Q_br_rt[branch,1] for branch in sub_branch_list)
+                    -Q_gen_rt[gen_id[1], 1]);
+            elseif ~isempty(add_branch_list) && isempty(sub_branch_list)
+                @constraint(m, P_bus_rt[bus,1]==
+                    sum(P_br_rt[branch,1] for branch in add_branch_list)
+                    -P_gen_rt[gen_id[1], 1]);
+                @constraint(m, Q_bus_rt[bus,1]==
+                    sum(Q_br_rt[branch,1] for branch in add_branch_list)
+                    -Q_gen_rt[gen_id[1], 1]);
+            elseif isempty(add_branch_list) && ~isempty(sub_branch_list)
+                @constraint(m, P_bus_rt[bus,1]==
+                    -sum(P_br_rt[branch,1] for branch in sub_branch_list)
+                    -P_gen_rt[gen_id[1], 1]);
+                @constraint(m, Q_bus_rt[bus,1]==
+                    -sum(Q_br_rt[branch,1] for branch in sub_branch_list)
+                    -Q_gen_rt[gen_id[1], 1]);
+            end
         end
-        @constraint(m, Qf_min[shunt,1]<=Qf_rt[shunt,1]);
-        @constraint(m, Qf_rt[shunt,1]<=Qf_max[shunt,1]);
     end
-
-
-    for Bus=1:NoBus
-        @constraint(m, V_min^2<= v_rt[Bus,1]);
-        @constraint(m, v_rt[Bus,1]<= V_max^2);
-        if bus_data.type[Bus]==1
-            bus_shunt_list =
-            setdiff(findall(hasshunt->hasshunt==Bus, shunt.find_bus),198:209);
-            if ~isempty(bus_shunt_list)
-                @constraint(m, P_bus_rt[Bus,1]==sum(
-                Pd[shunt,1]/shunt_struct.baseMVA[shunt]
-                -Pg_rt[shunt,1]-R_rt[shunt,1] for shunt in bus_shunt_list));
-            else
-                @constraint(m, P_bus_rt[Bus,1]==0)
-            end
-        else
-            @constraint(m, P_bus_rt[Bus,1]==0)
-        end
-    end
-
-    for Brh=1:BrN
-        fbus = branch_data.fbus[Brh];
-        tbus = branch_data.tbus[Brh];
-        tbus_out_branch_list =
-            setdiff(findall(isafbus->isafbus==tbus, branch_data.fbus), Brh);
-        tbus_in_branch_list =
-            setdiff(findall(isafbus->isafbus==tbus, branch_data.tbus), Brh);
-        if tbus in gen_struct.bus
-            genid_list = findall(isagen->isagen==tbus, gen_data.bus)
-            genid=genid_list[1]
-            if ~isempty(tbus_out_branch_list) && ~isempty(tbus_in_branch_list)
-                @constraint(m,P_br_rt[Brh,1]==
-                    -P_gen_rt[genid, 1]
-                    +sum(P_br_rt[outbrunch, 1] for outbrunch in tbus_out_branch_list)
-                    -sum(P_br_rt[inbrunch, 1] for inbrunch in tbus_in_branch_list));
-
-            elseif isempty(tbus_out_branch_list) && ~isempty(tbus_in_branch_list)
-                @constraint(m,P_br_rt[Brh,1]==
-                    -P_gen_rt[genid, 1]
-                    -sum(P_br_rt[inbrunch, 1] for inbrunch in tbus_in_branch_list));
-
-            elseif ~isempty(tbus_out_branch_list) && isempty(tbus_in_branch_list)
-                @constraint(m,P_br_rt[Brh,1]==
-                    -P_gen_rt[genid, 1]
-                    +sum(P_br_rt[outbrunch, 1] for outbrunch in tbus_out_branch_list));
-
-            elseif isempty(tbus_out_branch_list) && isempty(tbus_in_branch_list)
-                @constraint(m,P_br_rt[Brh,1]==
-                    -P_gen_rt[genid, 1])
-            end
-        else
-            if ~isempty(tbus_out_branch_list) && ~isempty(tbus_in_branch_list)
-                @constraint(m,P_br_rt[Brh,1]==
-                    P_bus_rt[tbus, 1]
-                    +sum(P_br_rt[outbrunch,1] for outbrunch in tbus_out_branch_list)
-                    -sum(P_br_rt[inbrunch,1] for inbrunch in tbus_in_branch_list));
-
-            elseif isempty(tbus_out_branch_list) && ~isempty(tbus_in_branch_list)
-                @constraint(m,P_br_rt[Brh,1]==
-                    P_bus_rt[tbus, 1]
-                    -sum(P_br_rt[inbrunch,1] for inbrunch in tbus_in_branch_list));
-
-            elseif ~isempty(tbus_out_branch_list) && isempty(tbus_in_branch_list)
-                @constraint(m,P_br_rt[Brh,1]==
-                    P_bus_rt[tbus, 1]
-                    +sum(P_br_rt[outbrunch,1] for outbrunch in tbus_out_branch_list));
-
-            elseif isempty(tbus_out_branch_list) && isempty(tbus_in_branch_list)
-                @constraint(m,P_br_rt[Brh,1]==
-                    P_bus_rt[tbus, 1]);
-            end
-        end
-
-        # @constraint(m,v_rt[tbus,1]==
-        #     v_rt[fbus,1]-2*(r[Brh]*P_br_rt[Brh,1]+x[Brh]*Q_br_rt[Brh,1]));
-
+    for branch =1:NoBr
+        fbus = branch_struct.fbus[branch];
+        tbus = branch_struct.tbus[branch];
+        @constraint(m, v_rt[fbus]-v_rt[tbus]==
+            2*(r[branch]*P_br_rt[branch]+x[branch]*Q_br_rt[branch]))
     end
 
 
     for Gen=1:NoGen
-        gen_out_branch_list=findall(isafbus->isafbus==Gen, branch_data.fbus);
-        gen_in_branch_list=findall(isatbus->isatbus==Gen, branch_data.tbus);
-        if ~isempty(gen_out_branch_list) && ~isempty(gen_in_branch_list)
-        @constraint(m, P_gen_rt[Gen,1]==
-           sum(P_br_rt[outbranch,1] for outbranch in gen_out_branch_list)
-           -sum(P_br_rt[inbranch,1] for inbranch in gen_in_branch_list));
-        elseif isempty(gen_out_branch_list) && ~isempty(gen_in_branch_list)
-            @constraint(m, P_gen_rt[Gen,1]==
-            -sum(P_br_rt[inbranch,1] for inbranch in gen_in_branch_list));
-        elseif ~isempty(gen_out_branch_list) && isempty(gen_in_branch_list)
-            @constraint(m, P_gen_rt[Gen,1]==
-            sum(P_br_rt[outbranch,1] for outbranch in gen_out_branch_list));
-        # elseif isempty(gen_out_branch_list) && isempty(gen_in_branch_list)
-        #     @constraint(m, P_gen_rt[Gen,1]== 0);
-        #     println("???")
-        end
-
         @constraint(m,
-            P_gen_rt[Gen,1]<=gen_data.Pmax[Gen]/bus_data.baseMVA[Gen])
+            P_gen_rt[Gen,1]<=gen_struct.Pmax[Gen]/baseMVA)
         @constraint(m,
-            P_gen_rt[Gen,1]>=-gen_data.Pmax[Gen]/bus_data.baseMVA[Gen])
-        # @constraint(m,
-        #     Q_gen_rt[Gen,1]<=gen_data.Qmax[Gen]/bus_data.baseMVA[Gen])
-        # @constraint(m,
-        #     Q_gen_rt[Gen,1]>=gen_data.Qmin[Gen]/bus_data.baseMVA[Gen])
+            P_gen_rt[Gen,1]>=gen_struct.Pmin[Gen]/baseMVA)
+        @constraint(m,
+            Q_gen_rt[Gen,1]<=gen_struct.Qmax[Gen]/baseMVA)
+        @constraint(m,
+            Q_gen_rt[Gen,1]>=gen_struct.Qmin[Gen]/baseMVA)
     end
-    # shunt
-    @variable(m, Pg[1:SN, 1:NoShunt, 1:T-1]); # the real power output
-    @variable(m, Qf[1:SN, 1:NoShunt, 1:T-1]); # the real power output
-    @variable(m, B[1:SN, 1:NoShunt, 1:T-1]); # the storage
-    @variable(m, R[1:SN, 1:NoShunt, 1:T-1]);# the charge/discharge rate
+
     # bus
+    @variable(m, Pg[1:SN, 1:NoBus, 1:T-1]); # the real power output
+    @variable(m, Qf[1:SN, 1:NoBus, 1:T-1]); # the real power output
+    @variable(m, B[1:SN, 1:NoBus, 1:T-1]); # the storage
+    @variable(m, R[1:SN, 1:NoBus, 1:T-1]);# the charge/discharge rate
     @variable(m, P_bus[1:SN, 1:NoBus, 1:T-1])
     @variable(m, Q_bus[1:SN, 1:NoBus, 1:T-1])
     @variable(m, v[1:SN, 1:NoBus, 1:T-1])
-    # Branch level
-    @variable(m, P_br[1:SN,1:BrN, 1:T-1])
-    @variable(m, Q_br[1:SN,1:BrN, 1:T-1])
 
+    # Branch level
+    @variable(m, P_br[1:SN,1:NoBr, 1:T-1])
+    @variable(m, Q_br[1:SN,1:NoBr, 1:T-1])
+    # Gen Level
     @variable(m, P_gen[1:SN, 1:NoGen, 1:T-1])
     @variable(m, Q_gen[1:SN, 1:NoGen, 1:T-1])
+
+    for scenario = 1:SN
+        for t=1:T-1
+            for bus=1:NoBus
+                @constraint(m, Pg_min[bus, t]<=Pg[scenario, bus ,t]);
+                @constraint(m, Pg[scenario, bus,t]<=
+                    positive_scalar(icdf*sqrt(pd.sigma[bus,t+1]+pg.sigma[bus,t+1])+pg.mu[bus,t+1]));
+                @constraint(m, B_min[bus,t+1] <= B[scenario,bus,t]);
+                @constraint(m, B[scenario,bus,t]<= B_max[bus,t+1]);
+                @constraint(m, R_min[bus,t+1] <= R[scenario,bus,t]);
+                @constraint(m, R[scenario,bus,t]<= R_max[bus,t+1]);
+                if t==1
+                    @constraint(m, B[scenario,bus,1] == B_rt[bus,1]
+                        -delta_t*(R_rt[bus,1]*baseMVA))
+                else
+                    @constraint(m, B[scenario,bus,t] ==
+                        B[scenario,bus,t-1] - R[scenario,bus,t-1]*baseMVA*delta_t)
+                end
+                @constraint(m, Qf_min[bus,t+1] <= Qf[scenario,bus,t]);
+                @constraint(m, Qf[scenario,bus,t]<= Qf_max[bus,t+1]);
+
+                @constraint(m, V_min^2<= v[scenario,bus,t]);
+                @constraint(m, v[scenario,bus,t]<= V_max^2);
+
+                @constraint(m,  P_bus[scenario,bus,t]==
+                -Pd[bus,t+1]
+                +Pg[scenario,bus,t]+R[scenario, bus,t]);
+
+                add_branch_list = findall(one->one==1, C_ind[bus,:])
+                sub_branch_list = findall(minusone->minusone==-1, C_ind[bus,:])
+
+                if bus_struct.type[bus]==1
+                    if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
+                        @constraint(m, P_bus[scenario,bus,t]==
+                            sum(P_br[scenario,branch,t] for branch in add_branch_list)
+                            -sum(P_br[scenario,branch,t] for branch in sub_branch_list)
+                            );
+                        @constraint(m, Q_bus[scenario,bus,t]==
+                            sum(Q_br[scenario,branch,t] for branch in add_branch_list)
+                            -sum(Q_br[scenario,branch,t] for branch in sub_branch_list)
+                            );
+                    elseif ~isempty(add_branch_list) && isempty(sub_branch_list)
+                        @constraint(m, P_bus[scenario,bus,t]==
+                            sum(P_br[scenario,branch,t] for branch in add_branch_list)
+                            );
+                        @constraint(m, Q_bus[scenario,bus,t]==
+                            sum(Q_br[scenario,branch,t] for branch in add_branch_list)
+                            );
+                    elseif isempty(add_branch_list) && ~isempty(sub_branch_list)
+
+                        @constraint(m, P_bus[scenario,bus,t]==
+                            -sum(P_br[scenario,branch,t] for branch in sub_branch_list)
+                            );
+                        @constraint(m, Q_bus[scenario,bus,t]==
+                            -sum(Q_br[scenario,branch,t] for branch in sub_branch_list)
+                            );
+                    end
+                else
+                    gen_id = findall(bus_id ->bus_id == bus, gen_struct.bus);
+                    if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
+                        @constraint(m, P_bus[scenario,bus,t]==
+                            sum(P_br[scenario,branch,t] for branch in add_branch_list)
+                            -sum(P_br[scenario,branch,t] for branch in sub_branch_list)
+                            -P_gen[scenario,gen_id[1],t]);
+                        @constraint(m, Q_bus[scenario,bus,t]==
+                            sum(Q_br[scenario,branch,t] for branch in add_branch_list)
+                            -sum(Q_br[scenario,branch,t] for branch in sub_branch_list)
+                            -Q_gen[scenario,gen_id[1],t]);
+
+                    elseif ~isempty(add_branch_list) && isempty(sub_branch_list)
+                        @constraint(m, P_bus[scenario,bus,t]==
+                            sum(P_br[scenario,branch,t] for branch in add_branch_list)
+                            -P_gen[scenario,gen_id[1],t]);
+                        @constraint(m, Q_bus[scenario,bus,t]==
+                            sum(Q_br[scenario,branch,t] for branch in add_branch_list)
+                            -Q_gen[scenario,gen_id[1],t]);
+
+                    elseif isempty(add_branch_list) && ~isempty(sub_branch_list)
+                        @constraint(m, P_bus[scenario,bus,t]==
+                            -sum(P_br[scenario,branch,t] for branch in sub_branch_list)
+                            -P_gen[scenario,gen_id[1],t]);
+                        @constraint(m, Q_bus[scenario,bus,t]==
+                            -sum(Q_br[scenario,branch,t] for branch in sub_branch_list)
+                            -Q_gen[scenario,gen_id[1],t]);
+                    end
+                end
+            end
+            for branch =1:NoBr
+                fbus = branch_struct.fbus[branch];
+                tbus = branch_struct.tbus[branch];
+                @constraint(m, v[scenario,fbus,t]-v[scenario,tbus,t]==
+                    2*(r[branch]*P_br[scenario,branch,t]
+                    +x[branch]*Q_br[scenario,branch,t]))
+            end
+            for Gen=1:NoGen
+                @constraint(m,
+                    P_gen[scenario,Gen,t]<=gen_struct.Pmax[Gen]/baseMVA)
+                @constraint(m,
+                    P_gen[scenario,Gen,t]>=gen_struct.Pmin[Gen]/baseMVA)
+                @constraint(m,
+                    Q_gen[scenario,Gen,t]<=gen_struct.Qmax[Gen]/baseMVA)
+                @constraint(m,
+                    Q_gen[scenario,Gen,t]>=gen_struct.Qmin[Gen]/baseMVA)
+            end
+        end
+    end
+
+
+    if ancillary_type == "10min" || ancillary_type == "30min"
+            # println(Real_Bus_list)
+            # RT
+            @variable(m, P_rsrv_rt)
+            @variable(m, B_rsrv_rt)
+
+            @constraint(m, P_rsrv_rt>=0)
+            @constraint(m, B_rsrv_rt>=0)
+
+            if current_time <= tau
+                @constraint(m, B_rsrv_rt==0)
+
+            elseif current_time - tau>=1
+                ini_fb = max(current_time-tau-k+1,1);
+                fni_fb = current_time-tau;
+                length_fb = fni_fb - ini_fb +1;
+                mult_fb = k-length_fb+1:k;
+                # println(ini_fb)
+                # println
+                temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb]
+                if length_fb >= 2
+                    for f_rsrv_fb_n=2:length_fb;
+                        temp_f_rsrv_c_fb = (temp_f_rsrv_c_fb+
+                            mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n]);
+                    end
+                end
+                @constraint(m, B_rsrv_rt==floor(delta_t*temp_f_rsrv_c_fb*1000)/1000)
+                # println("nominal B_rsrv")
+                # println(floor(delta_t*temp_f_rsrv_c_fb*1000)/1000)
+                # println("sum B_feedback")
+                # println(sum(B_feedback))
+            end
+            # for Bus in Real_Bus_list
+            #     list = setdiff(Real_Bus_list, Bus)
+            #     # println(list)
+            #     # println(sum(B_feedback[bus, 1] for bus in list))
+            #     @constraint(m, B_rsrv_rt <= sum(B_rt[bus, 1] for bus in list))
+            # end
+
+            @constraint(m, B_rsrv_rt <= sum(B_rt))
+            # println(sum(B_feedback[bus, 1] for bus in Non_affected_Bus_list))
+            # @constraint(m, B_rsrv_rt <=
+            #     sum(B_rt[bus, 1] for bus in Non_affected_Bus_list))
+            # @constraint(m, B_rsrv_rt <= 4)
+            # Scenario
+            @variable(m, P_rsrv[1:SN,1:T-1])
+            @variable(m, B_rsrv[1:SN,1:T-1])
+            # @constraint(m, P_rsrv==3)
+
+            for scenario=1:SN
+                for t_real=current_time+1:current_time+T-1
+                    @constraint(m, P_rsrv[scenario, t_real-current_time]>=0)
+                    @constraint(m, B_rsrv[scenario, t_real-current_time]>=0)
+                    ini = t_real-tau-k+1;
+                    fin = t_real-tau;
+                    if fin <=0
+                        @constraint(m, B_rsrv[scenario, t_real-current_time]==0)
+                    elseif fin < current_time && fin>=1
+                        ini_fb = max(1,ini);
+                        fin_fb = fin;
+                        length_fb = fin_fb-ini_fb+1;
+                        mult_fb = k-length_fb+1:k;
+                        temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb];
+                        if length_fb >= 2
+                            for f_rsrv_fb_n=2:length_fb;
+                                temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
+                                    mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
+                            end
+                        end
+                        @constraint(m, B_rsrv[scenario, t_real-current_time]==
+                            floor(delta_t*temp_f_rsrv_c_fb*1000)/1000);
+                    elseif fin == current_time
+                        if current_time == 1
+                            @constraint(m, B_rsrv[scenario, t_real-current_time]==
+                            delta_t*k*P_rsrv_rt);
+                        else
+                            ini_fb = max(1, ini);
+                            fin_fb = fin-1;
+                            length_fb = fin_fb-ini_fb+1;
+                            mult_fb = k-length_fb:k-1;
+                            temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb];
+                            if length_fb >= 2
+                                for f_rsrv_fb_n=2:length_fb;
+                                    temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
+                                       mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
+                                 end
+                            end
+                            # @constraint(m, B_rsrv[scenario, t_real-current_time]==
+                            #     floor(delta_t*k*P_rsrv_rt*1000)/1000);
+                            @constraint(m, B_rsrv[scenario, t_real-current_time]==
+                                 delta_t*k*P_rsrv_rt
+                                 +floor(delta_t*temp_f_rsrv_c_fb*1000)/1000);
+                        end
+                     elseif ini < current_time && fin > current_time
+                        if current_time == 1
+                            ini_sc = current_time+1;
+                            fin_sc = fin;
+                            length_sc = fin_sc - ini_sc +1;
+                            mult_sc = k-length_sc+1:k;
+                            mult_rt = k-length_sc;
+                             temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
+                            if length_sc > 1
+                                for f_rsrv_sc_n=2:length_sc
+                                    temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+
+                                        mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
+                                end
+                            end
+                            @constraint(m, B_rsrv[scenario, t_real-current_time] ==
+                                delta_t*mult_rt*P_rsrv_rt
+                                +delta_t*temp_f_rsrv_c_sc);
+                        else
+                            ini_sc = current_time+1;
+                            fin_sc = fin;
+                            length_sc = fin_sc - ini_sc +1;
+                            mult_sc = k-length_sc+1:k;
+                            temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
+                            if length_sc > 1
+                                for f_rsrv_sc_n=2:length_sc
+                                    temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+
+                                        mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
+                                end
+                            end
+                            mult_rt = k-length_sc;
+                            ini_fb = max(1, ini);
+                            fin_fb = current_time-1;
+                            length_fb = fin_fb-ini_fb+1;
+                            temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb];
+                            if length_fb >= 2
+                                for f_rsrv_fb_n=2:length_fb;
+                                    temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
+                                        mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
+                                end
+                            end
+                            @constraint(m, B_rsrv[scenario, t_real-current_time] ==
+                            delta_t*mult_rt*P_rsrv_rt+
+                            delta_t*temp_f_rsrv_c_sc+
+                            floor(delta_t*temp_f_rsrv_c_fb*1000)/1000);
+                        end
+                    elseif ini == current_time
+                        ini_sc = current_time+1;
+                        fin_sc = fin;
+                        mult_sc = 2:k;
+                        temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time];
+                        for f_rsrv_sc_n=2:k-1
+                            temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+
+                                mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
+                        end
+                        @constraint(m, B_rsrv[scenario, t_real-current_time] ==
+                            delta_t*P_rsrv_rt
+                            +delta_t*temp_f_rsrv_c_sc);
+                    elseif ini > current_time
+                        ini_sc = ini;
+                        fin_sc = fin;
+                        mult_sc = 1:k;
+                        temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
+                        for f_rsrv_sc_n=2:k
+                            temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+
+                                mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
+                        end
+                        @constraint(m, B_rsrv[scenario, t_real-current_time]
+                            == delta_t*temp_f_rsrv_c_sc);
+
+                        if  t_real-current_time >= T-tau-1
+                            @constraint(m, P_rsrv[scenario, t_real-current_time]==0)
+                        end
+                    end
+                    # for Bus in Real_Bus_list
+                    #     list = setdiff(Real_Bus_list, Bus)
+                    #     @constraint(m, B_rsrv[scenario, t_real-current_time]
+                    #         <= sum(B[scenario, bus, t_real-current_time] for bus in list))
+                    # end
+
+                    @constraint(m, B_rsrv[scenario, t_real-current_time]
+                         <= sum(B[scenario, :, t_real-current_time]))
+
+               end
+           end
+        end
     # #
 
     if ancillary_type == "10min" || ancillary_type == "30min"
         @objective(m, Min,
-            fn_cost_RHC_anc(delta_t,P_bus_rt,P_bus,Pg_rt,Pg,P_rsrv_rt,
+            fn_cost_RHC_anc(delta_t, P_gen, P_gen_rt, Pg_rt,Pg, P_rsrv_rt,
             P_rsrv,price,pg,pd,beta,SN,obj, gen_struct, bus_struct, branch_struct))
     else
         @objective(m, Min,
-            fn_cost_RHC_rt(delta_t, P_gen, P_gen_rt, Pg_rt,Pg,price,
-                pg,pd,beta,SN,obj, gen_struct, bus_struct, branch_struct))
+            fn_cost_RHC_rt(delta_t, P_gen, P_gen_rt, Pg_rt,Pg, price,
+                pg, pd, beta, SN, obj, gen_struct, bus_struct, branch_struct, baseMVA))
     end
     #
     status=optimize!(m);
+
+
+
     #
     println(string("    ----", termination_status(m)))
     # println(MOI.PrimalStatus())
@@ -294,168 +559,124 @@ function optimal_NYISO(NoShunt, SN, current_time, obj, ancillary_type,
     time_solve=MOI.get(m, MOI.SolveTime());
     println(string("    ----Solve Time: ", time_solve))
     println(string("    ----Optimal Cost: ", cost_o))
-    # ## obtaining value
-    # Pg_rt_o=JuMP.value.(Pg_rt)
-    # Pg_rt_s=JuMP.value.(Pg)
-    # #
-    # # R_rt_o=JuMP.value.(R_rt)
-    # # R_s=JuMP.value.(R)
-    # # R_total = hcat(R_rt_o, R_s[1,:,:])
-    # #
-    # P_bus_ct_o=JuMP.value.(P_bus_rt)
-    # P_bus_sum_ct_o = sum(P_bus_ct_o[i,1] for i in 1:79);
-    # P_bus_o=JuMP.value.(P_bus)
-    # gen_list = gen_struct.id;
-    # for gen=1:length(gen_list)
-    #     println(gen_list[gen])
-    #     println(P_bus_rt_o[gen_list[gen], 1])
-    #     println(P_bus_rt_o[gen_list[gen], 1]*baseMVA[gen_list[gen]])
-    #     println(baseMVA[gen_list[gen]])
-    # end
-    P_gen_rt_o=JuMP.value.(P_gen_rt)
-    println(sum(P_gen_rt_o))
-    println(P_gen_rt_o)
-    P_br_rt_o=JuMP.value.(P_br_rt)
-    println(sum(P_br_rt_o))
+    P_gen_rt_o = JuMP.value.(P_gen_rt);
+    P_gen_sum_ct = sum(P_gen_rt_o[gen, 1]*baseMVA for gen in 1:NoGen)
+    println(string("aggregate generation: ", P_gen_sum_ct))
 
+    R_rt_o = JuMP.value.(R_rt);
+    R_sum_ct = sum(R_rt_o[:, 1]*baseMVA)
+    println(string("aggregate battery disharge: ", R_sum_ct))
 
-    for Gen=6:6
-        gen_out_branch_list=findall(isafbus->isafbus==Gen, branch_data.fbus);
-        gen_in_branch_list=findall(isafbus->isafbus==Gen, branch_data.tbus);
-        println(string("out branch", gen_out_branch_list))
-        println(string("in branch", gen_in_branch_list))
-        println(sum(P_br_rt_o[outbranch,1] for outbranch in gen_out_branch_list));
-        # println(sum(P_br_rt_o[inbranch,1] for inbranch in gen_in_branch_list));
-    end
-    shuntbMVA = shunt_struct.baseMVA;
-    Pd_pu=zeros(209,1)
-    for Shunt = 1:197
-        Pd_pu[Shunt,1]=Pd[Shunt,1]/shuntbMVA[Shunt]
-    end
-    println(sum(Pd_pu))
-
-    Pg_rt_o=JuMP.value.(Pg_rt);
-    println(sum(Pg_rt_o))
-    Pg_bus_rt_o=JuMP.value.(P_bus_rt);
-    println(sum(Pg_bus_rt_o))
-    # P_gen_o=JuMP.value.(P_gen)
-    # P_gen_traj=hcat(P_gen_rt_o, P_gen_o[1,:,:]);
-    # println(sum(P_gen_traj, dims=1))
-    # println(P_gen_rt_o)
-    # println(size(P_br_rt))
-    # P_br_rt_o=JuMP.value.(P_br_rt)
-    # println(size(P_br_rt_o))
-    # println(sum(P_br_rt_o))
-    println(sum(Pd[1:197,1]))
-    # P_gen_sum_o = reshape(
-    #     sum(P_bus_o[1,gen, :]*baseMVA[gen] for gen in gen_list),T-1,1)
-    # P0 = vcat(P_gen_sum_ct_o, P_gen_sum_o)
-    # Pg_rt_o=JuMP.value.(Pg_rt)
-    # Pg_o=JuMP.value.(Pg)
-    # Pg_sum_pu = hcat(Pg_rt_o,Pg_o[1,:,:])
-    # Pg_traj = zeros(209,1)
-    # for shunt =1:209
-    #     Pg_traj[shunt,1] = Pg_rt_o[shunt,1]*shunt_struct.baseMVA[shunt]
-    # end
-    # println(Pg_sum)
-    # println(sum(Pg_traj)/sum(Pd[:,1]))
-    # println(sum(P_gen_sum_ct_o)/sum(Pd[:,1]))
-    # println(sum(P_gen_sum_ct_o_2)/sum(Pd[:,1]))
-    #
-    # # P_bus_3 = hcat(P_bus_rt_o, P_bus_s[3,:,:])
-    # # println(sum(P_bus_3[1,:]))
-    # # P_bus_4 = hcat(P_bus_rt_o, P_bus_s[4,:,:])
-    # # println(sum(P_bus_4[1,:]))
-    # # P_bus_5 = hcat(P_bus_rt_o, P_bus_s[5,:,:])
-    # # println(sum(P_bus_5[1,:]))
-    # # P_bus_6 = hcat(P_bus_rt_o, P_bus_s[6,:,:])
-    # # println(sum(P_bus_6[1,:]))
-    #
-    # # P_bus_s=JuMP.value.(P_bus)
-    # # P_bus_total = hcat(P_bus_rt_o, P_bus_s[1,:,:])
-    # #
-    # # if ancillary_type == "10min" || ancillary_type == "30min"
-    # #     P_rsrv_o=JuMP.value(P_rsrv_rt);
-    # #     P_rsrv_s=JuMP.value.(P_rsrv);
-    # #     P_rsrv_total = hcat([P_rsrv_o], P_rsrv_s);
-    # # else
-    # #     P_rsrv_total = zeros(1,T);
-    # # end
-    #
-    # # val_opt = (lambda1=(price.lambda_scenario[1, 1:T]/12),P_gen1=(P_bus_1[1,:]*100),
-    # # lambda2=(price.lambda_scenario[2, 1:T]/12), P_gen2=(P_bus_2[1,:]*100))
-    # # val_opt = (P_bus = (P_bus_total), Pg = (Pg_total), R=(R_total), P_rsrv = (P_rsrv_total),
-    # #     Cost = (cost_o), Solve_time=(time_solve))
-
-
+    println(string("aggregate demand: ", baseMVA*sum(Pd[:,1])))
     return 0
 end
 
 
-function fn_cost_RHC_rt(delta_t, P_gen, P_gen_rt, Pg_rt,Pg,price,
-    pg,pd,beta,SN,obj, gen_struct, bus_struct, branch_struct)
+function fn_cost_RHC_rt(delta_t, P_gen, P_gen_rt, Pg_rt,Pg, price,
+    pg, pd, beta, SN, obj, gen_struct, bus_struct, branch_struct, baseMVA)
 
     T=obj.T;
     icdf = obj.icdf;
 
-    baseMVA=gen_struct.baseMVA;
-    sum_prob = sum(price.probability[1:SN])
-    gen_list = gen_struct.id;
 
-    P_gen_sum_ct = sum(P_gen_rt[gen, 1]*baseMVA[gen] for gen in gen_list)
-    # P_gen_sum_ct = sum(P_gen_rt[:, 1])
-    lambda_ct = price.probability[1]/sum_prob*price.lambda_scenario[1,1]
-    #
-    # Pg_ct_sum_diff = sum(Pg_rt) -
-    #     sum(positive_array(icdf.*sqrt.(pd.sigma[:,1]+pg.sigma[:,1]))
-    #     +pg.mu[:,1])
-    # Cost_Pg_ct_diff = Pg_ct_sum_diff*beta*delta_t;
-    #
-    # if SN>1
-    #     for scenario=2:SN
-    #         lambda_ct =lambda_ct+
-    #         price.probability[scenario]/sum_prob*price.lambda_scenario[scenario,1];
-    #     end
-    # end
+    sum_prob = sum(price.probability[1:SN]);
+    NoGen = length(gen_struct.id);
+
+    ################### Generation Cost ###################
+    # At current time
+    lambda_ct = sum(price.probability[scenario]/sum_prob*price.lambda_scenario[scenario,1]
+    for scenario in 1:SN)
+    P_gen_sum_ct = sum((P_gen_rt[gen, 1])*baseMVA for gen in 1:NoGen);
     Cost_P_gen_sum_ct = delta_t*lambda_ct*P_gen_sum_ct;
-    # #
-    # # # =======
-    P_gen_sum_scenario = reshape(
-        sum(P_gen[1, gen, :]*baseMVA[gen] for gen in gen_list),T-1,1)
-    # # #
-    lambda_scenario = reshape(
-        price.probability[1]/sum_prob*price.lambda_scenario[1,2:T],1,T-1)
-    # # #
-    Cost_P_gen_sum_scenario = delta_t* lambda_scenario * P_gen_sum_scenario;
-    # #
-    # # Pg_prob_sum_scenario = price.probability[1]/sum_prob*sum(Pg[1, :, :])
-    # #
-    # # if SN>1
-    # #     for scenario=2:SN
-    # #         P_gen_sum_scenario = reshape(
-    # #         sum(P_bus[scenario, gen, :]*baseMVA[gen] for gen in gen_list),T-1,1)
-    # #
-    # #         lambda_scenario_prob = reshape(
-    # #         price.probability[scenario]/sum_prob*price.lambda_scenario[scenario,2:T],1,T-1)
-    # #
-    # #         Cost_P_gen_sum_scenario = Cost_P_gen_sum_scenario+delta_t* lambda_scenario_prob * P_gen_sum_scenario;
-    # #
-    # #         # Pg_prob_sum_scenario = Pg_prob_sum_scenario+price.probability[scenario]/sum_prob*sum(Pg[scenario, :, :])
-    # #     end
-    # # end
-    # # Pg_diff_sum_scenario = Pg_prob_sum_scenario
-    # #     -positive_array(icdf.*sqrt.(pd.sigma[:,:]+pg.sigma[:,:])+pg.mu[:,:])
-    # #
-    # # Cost_Pg_scenario_diff = Pg_diff_sum_scenario*beta*delta_t;
-    # #
-    # #
-    # # println(string("    ----Case: Real-time Balancing"))
-    # # return (Cost_P_gen_sum_ct+Cost_P_gen_sum_scenario[1,1]
-    # # +Cost_Pg_ct_diff+Cost_Pg_scenario_diff)*base.MVA
-    return Cost_P_gen_sum_ct
+    # At future time
+    Cost_P_gen_sum_scenario =
+        delta_t*sum(
+        sum(reshape(price.probability[scenario]/sum_prob*
+            price.lambda_scenario[scenario,2:T],1,T-1)*
+        reshape(
+        sum(P_gen[scenario, gen, :] for gen in 1:NoGen),
+        T-1,1))
+        for scenario in 1:SN)*baseMVA;
+
+    ################### FOL Cost (Solar penalty)###################
+
+    Pg_ct_sum_diff = sum(Pg_rt) -
+        sum(positive_array(icdf.*sqrt.(pd.sigma[:,1]+pg.sigma[:,1]))
+        +pg.mu[:,1]);
+    Cost_Pg_ct_diff = Pg_ct_sum_diff*beta*delta_t*baseMVA;
+
+    Pg_prob_sum_scenario = sum(
+        price.probability[scenario]/sum_prob*sum(Pg[scenario, :, :])
+        for scenario in 1:SN);
+    Pg_diff_sum_scenario = (Pg_prob_sum_scenario
+        -sum(positive_array(icdf.*sqrt.(pd.sigma[:,:]+pg.sigma[:,:])+pg.mu[:,:])));
+    Cost_Pg_scenario_diff = Pg_diff_sum_scenario*beta*delta_t*baseMVA;
+
+
+    Final_cost = (Cost_P_gen_sum_ct+Cost_P_gen_sum_scenario
+        +Cost_Pg_ct_diff+Cost_Pg_scenario_diff)
+
+    return Final_cost
 end
 
+function fn_cost_RHC_anc(delta_t, P_gen, P_gen_rt, Pg_rt,Pg, P_rsrv_rt,
+    P_rsrv,price,pg,pd,beta,SN,obj, gen_struct, bus_struct, branch_struct)
 
+    T=obj.T;
+    icdf = obj.icdf;
+
+
+    sum_prob = sum(price.probability[1:SN]);
+    NoGen = length(gen_struct.id);
+
+    ################### Generation Cost ###################
+    # At current time
+    lambda_ct = sum(price.probability[scenario]/sum_prob*price.lambda_scenario[scenario,1]
+    for scenario in 1:SN)
+    P_gen_sum_ct = sum((P_gen_rt[gen, 1])*baseMVA for gen in 1:NoGen);
+    Cost_P_gen_sum_ct = delta_t*lambda_ct*P_gen_sum_ct;
+    # At future time
+    Cost_P_gen_sum_scenario =
+        delta_t*sum(
+        sum(reshape(price.probability[scenario]/sum_prob*
+            price.lambda_scenario[scenario,2:T],1,T-1)*
+        reshape(
+        sum(P_gen[scenario, gen, :] for gen in 1:NoGen),
+        T-1,1))
+        for scenario in 1:SN)*baseMVA;
+
+    ################### FOL Cost (Solar penalty)###################
+
+    Pg_ct_sum_diff = sum(Pg_rt) -
+        sum(positive_array(icdf.*sqrt.(pd.sigma[:,1]+pg.sigma[:,1]))
+        +pg.mu[:,1]);
+    Cost_Pg_ct_diff = Pg_ct_sum_diff*beta*delta_t*baseMVA;
+
+    Pg_prob_sum_scenario = sum(
+        price.probability[scenario]/sum_prob*sum(Pg[scenario, :, :])
+        for scenario in 1:SN);
+    Pg_diff_sum_scenario = (Pg_prob_sum_scenario
+        -sum(positive_array(icdf.*sqrt.(pd.sigma[:,:]+pg.sigma[:,:])+pg.mu[:,:])));
+    Cost_Pg_scenario_diff = Pg_diff_sum_scenario*beta*delta_t*baseMVA;
+
+    ################### Revenue from ancillary ###################
+    alpha_ct = sum(price.probability[scenario]/sum_prob*price.alpha_scenario[scenario,1]
+        for scenario in 1:SN);
+    Revenue_P_rsrv_ct = delta_t*alpha_ct*P_rsrv_rt;
+    Revenue_P_rsrv_scenario = sum(
+        sum(
+        price.probability[scenario]/sum_prob*delta_t*
+        reshape(P_rsrv[scenario, :], 1, T-1)*
+        reshape(price.alpha_scenario[scenario, 2:end],T-1,1)
+        for scenario in 1:SN)
+        );
+
+    Final_cost = (Cost_P_gen_sum_ct+Cost_P_gen_sum_scenario
+        +Cost_Pg_ct_diff+Cost_Pg_scenario_diff
+        -Revenue_P_rsrv_ct-Revenue_P_rsrv_scenario)
+
+    return Final_cost
+end
 
 
 
