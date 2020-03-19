@@ -24,7 +24,7 @@ data_trace_gen=CSV.File("../data/NYISO-data/gen.csv") |> DataFrame
 # sys para
 # ancillary_type="10min"
 # ancillary_type="30min"
-ancillary_type="without"
+ancillary_type="10min"
 # # of timeslots
 T=288;
 # # of bus
@@ -134,23 +134,17 @@ B_feedback = zeros(NoBus, 1)
 
 val_opt = optimal_NYISO(SN, current_time, obj, ancillary_type, baseMVA,
     feedback, pd, pg, price, shunt_struct, bus_struct, branch_struct, gen_struct);
-#     pg_aval = sum(pg.mu, dims=1)
-#     println(string("Solar Utlizing rate ", sum(val_opt.Pg)/sum(pg_aval)));
-#     println(string("Total avaliability is ", sum(pg_aval)));
-#     println(string("Total demand is ", sum(pd.traj)));
-#     println(string("Total solar is ", sum(val_opt.Pg)));
-#     # write_output_out(val_opt, current_time)
-#     println("=================================================")
-# end
 
-
-# println(val_opt.P0)
-
-# Pd_rt=pd_raw_one["Pd"][:,1:288]/1000 + error_fixed;
-# println("GML - optimization finished")
-
+plot(1:288, reshape(val_opt.lambda_1,288,1), label="lambda1", linewidth=2)
+# plot!(1:288, reshape(sum(pd.traj, dims=1)*100,288,1), label="Pd", linewidth=2)
+# plot!(1:288, reshape(sum(pg.mu, dims=1)*100,288,1), label="Pg aval", linewidth=2)
+# plot!(1:288, reshape(sum(val_opt.pg_upper, dims=1)*110,288,1), label="Pg upper", linewidth=2)
+# plot!(1:288, reshape(sum(val_opt.P0_traj, dims=1)*100,288,1), label="P0", linewidth=2)
+# plot!(1:288, reshape(sum(val_opt.Pg_traj, dims=1)*100,288,1), label="Pg", linewidth=2)
+plot!(1:288, reshape(sum(val_opt.R_traj, dims=1)*100,288,1), label="R", linewidth=2)
+plot!(1:288, reshape(sum(val_opt.B_traj, dims=1),288,1), label="B", linewidth=2)
 
 # plot(1:576, reshape(sum(pd_raw.pd_rt, dims=1),576,1), label="rt", linewidth=2)
-# plot!(1:576, reshape(sum(pd_raw.pd_da, dims=1),576,1), label="da", linewidth=2)
-# plot!(1:288, reshape(val_opt.P_rsrv_total,288,1), label="P_rsrv", linewidth=2)
-# plot!(1:288, reshape(val_opt.lambda_1,288,1), label="lambda1", linewidth=2)
+# plot(1:576, reshape(sum(pd_raw.pd_da, dims=1),576,1), label="da", linewidth=2)
+# plot(1:288, reshape(val_opt.P_rsrv_total,288,1), label="P_rsrv", linewidth=2)
+# plot!(1:288, reshape(val_opt.alpha_1,288,1), label="alpha", linewidth=2)

@@ -288,245 +288,245 @@ function optimal_NYISO(NoShunt, SN, current_time, obj, ancillary_type,
 
     @variable(m, P_gen[1:SN, 1:NoGen, 1:T-1])
     # #
-    # for scenario = 1:SN
-    #     for t=1:T-1
-    #         for shunt=1:NoShunt
-    #             shuntbMVA = shunt_struct.baseMVA[shunt]
-    #             if shunt_data.type[shunt] == 1
-    #                 @constraint(m, Pg_min[shunt, t+1]<=Pg[scenario, shunt ,t]);
-    #                 @constraint(m, Pg[scenario, shunt,t]<=
-    #                     positive_scalar(icdf*sqrt(
-    #                     pd.sigma[shunt,t+1]+pg.sigma[shunt,t+1])/shuntbMVA
-    #                     +pg.mu[shunt,t+1]/shuntbMVA));
-    #                 @constraint(m, B_min[shunt,t+1] <= B[scenario,shunt,t]);
-    #                 @constraint(m, B[scenario,shunt,t]<= B_max[shunt,t+1]);
-    #                 @constraint(m, R_min[shunt,t+1] <= R[scenario,shunt,t]);
-    #                 @constraint(m, R[scenario,shunt,t]<= R_max[shunt,t+1]);
-    #                 if t==1
-    #                     @constraint(m, B[scenario,shunt,1] ==
-    #                         B_rt[shunt,1]-
-    #                         delta_t*(R_rt[shunt,1]*shunt_data.baseMVA[shunt]))
-    #                 else
-    #                     @constraint(m, B[scenario,shunt,t] ==
-    #                         B[scenario,shunt,t-1] -
-    #                         R[scenario,shunt,t-1]*shunt_data.baseMVA[shunt]*delta_t)
-    #                 end
-    #             else
-    #                 @constraint(m, Pg[scenario, shunt,t]==0);
-    #                 @constraint(m, B[scenario, shunt,t]==0);
-    #                 @constraint(m, R[scenario, shunt,t]==0);
-    #             end
-    #             @constraint(m, Qf_min[shunt,t+1] <= Qf[scenario,shunt,t]);
-    #             @constraint(m, Qf[scenario,shunt,t]<= Qf_max[shunt,t+1]);
-    #         end
-    #
-    #         for Bus = 1: NoBus
-    #             @constraint(m, V_min^2<= v[scenario,Bus,t]);
-    #             @constraint(m, v[scenario,Bus,t]<= V_max^2);
-    #             if bus_data.type[Bus]==1
-    #                 bus_shunt_list = findall(hasshunt->hasshunt==Bus, shunt.find_bus);
-    #                 if ~isempty(bus_shunt_list)
-    #                     @constraint(m, P_bus[scenario,Bus,t]==sum(
-    #                     Pd[shunt,t+1]/shunt_struct.baseMVA[shunt]
-    #                     -Pg[scenario,shunt,t]-R[scenario,shunt,t]
-    #                     for shunt in bus_shunt_list));
-    #                     @constraint(m, Q_bus[scenario,Bus,t]==sum(
-    #                     Qf[scenario,shunt,t] for shunt in bus_shunt_list));
-    #                 elseif isempty(bus_shunt_list)
-    #                     @constraint(m, P_bus[scenario,Bus,t]==0);
-    #                     @constraint(m, Q_bus[scenario,Bus,t]==0);
-    #                 end
-    #             else
-    #                 gen_out_branch_list=findall(isafbus->isafbus==Bus, branch_data.fbus);
-    #                 gen_in_branch_list=findall(isafbus->isafbus==Bus, branch_data.tbus);
-    #                 if ~isempty(gen_out_branch_list) && ~isempty(gen_in_branch_list)
-    #                     @constraint(m, P_bus[scenario,Bus,t]==
-    #                         sum(P_br[scenario,branch,t]
-    #                         for branch in gen_out_branch_list)-
-    #                         sum(P_br[scenario,branch,t]
-    #                         for branch in gen_in_branch_list));
-    #                 elseif ~isempty(gen_out_branch_list) && isempty(gen_in_branch_list)
-    #                     @constraint(m, P_bus[scenario,Bus,t]==
-    #                         sum(P_br[scenario,branch,t]
-    #                         for branch in gen_out_branch_list));
-    #                 elseif isempty(gen_out_branch_list) && ~isempty(gen_in_branch_list)
-    #                     @constraint(m, P_bus[scenario,Bus,t]== -
-    #                         sum(P_br[scenario,branch,t]
-    #                         for branch in gen_in_branch_list));
-    #                 end
-    #                 gen_id_list=findall(isabus->isabus==Bus, gen_data.bus);
-    #                 gen_id = gen_id_list[1];
-    #                 @constraint(m,
-    #                     P_bus[scenario,Bus,t]<=gen_data.Pmax[gen_id]/bus_data.baseMVA[Bus])
-    #                 @constraint(m,
-    #                     P_bus[scenario,Bus,t]>=gen_data.Pmin[gen_id]/bus_data.baseMVA[Bus])
-    #                 @constraint(m,
-    #                     Q_bus[scenario,Bus,t]<=gen_data.Qmax[gen_id]/bus_data.baseMVA[Bus])
-    #                 @constraint(m,
-    #                     Q_bus[scenario,Bus,t]>=gen_data.Qmin[gen_id]/bus_data.baseMVA[Bus])
-    #             end
-    #         end
-    #         for Brh=1:BrN
-    #             fbus = branch_data.fbus[Brh];
-    #             tbus = branch_data.tbus[Brh];
-    #             tbus_branch_list = findall(isafbus->isafbus==tbus, branch_data.fbus);
-    #             if isempty(tbus in gen_struct.bus)
-    #                 if ~isempty(tbus_branch_list)
-    #                     @constraint(m,P_br[scenario,Brh,t]==
-    #                         P_bus[scenario, tbus, t]
-    #                         +sum(P_br[scenario,tbus_branch_list[branch],t]
-    #                         for branch=1:length(tbus_branch_list)));
-    #
-    #                     @constraint(m,Q_br[scenario,Brh,1]==
-    #                         Q_bus[scenario,tbus, t]
-    #                         +sum(P_br[scenario,tbus_branch_list[branch],t]
-    #                          for branch=1:length(tbus_branch_list)));
-    #                 else
-    #                     @constraint(m,P_br[scenario,Brh,t]==
-    #                         P_bus[scenario, tbus, t]);
-    #
-    #                     @constraint(m,Q_br[scenario,Brh,1]==
-    #                         Q_bus[scenario,tbus, t]);
-    #                 end
-    #             end
-    #
-    #             @constraint(m,v[scenario,tbus,t]==
-    #             v[scenario,fbus,t]-
-    #             2*(r[Brh]*P_br[scenario,Brh,t]+x[Brh]*Q_br[scenario,Brh,t]));
-    #         end
-    #     end
-    # end
-    # ###########################################################################
-    # # variables and Constraints for reserve markets
-    # if ancillary_type == "10min" || ancillary_type == "30min"
-    #     # RT
-    #     @variable(m, P_rsrv_rt)
-    #     @variable(m, B_rsrv_rt)
-    #     @constraint(m, P_rsrv_rt>=0)
-    #     @constraint(m, B_rsrv_rt>=0)
-    #     if current_time <= tau
-    #         @constraint(m, B_rsrv_rt==0)
-    #     elseif current_time - tau>=1
-    #         ini_fb = max(current_time-tau-k+1,1);
-    #         fni_fb = current_time-tau;
-    #         length_fb = fni_fb - ini_fb +1;
-    #         mult_fb = k-length_fb+1:k;
-    #         temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb]
-    #         if length_fb >= 2
-    #             for f_rsrv_fb_n=2:length_fb;
-    #                 temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
-    #                     mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
-    #             end
-    #         end
-    #         @constraint(m, B_rsrv_rt==delta_t*temp_f_rsrv_c_fb*base.MVA)
-    #     end
-    #     @constraint(m, B_rsrv_rt <= sum(B_rt))
-    #     # Scenario
-    #     @variable(m, P_rsrv[1:SN,1:T-1])
-    #     @variable(m, B_rsrv[1:SN,1:T-1])
-    #     for scenario=1:SN
-    #         for t_real=current_time+1:current_time+T-1
-    #             @constraint(m, P_rsrv[scenario, t_real-current_time]>=0)
-    #             @constraint(m, B_rsrv[scenario, t_real-current_time]>=0)
-    #             ini = t_real-tau-k+1;
-    #             fin = t_real-tau;
-    #             if fin <=0
-    #                 @constraint(m, B_rsrv[scenario, t_real-current_time]==0)
-    #             elseif fin < current_time && fin>=1
-    #                 ini_fb = max(1,ini);
-    #                 fin_fb = fin;
-    #                 length_fb = fin_fb-ini_fb+1;
-    #                 mult_fb = k-length_fb+1:k;
-    #                 temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb];
-    #                 if length_fb >= 2
-    #                     for f_rsrv_fb_n=2:length_fb;
-    #                         temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
-    #                             mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
-    #                     end
-    #                 end
-    #                 @constraint(m, B_rsrv[scenario, t_real-current_time]==delta_t*temp_f_rsrv_c_fb*base.MVA);
-    #             elseif fin == current_time
-    #                 if current_time == 1
-    #                     @constraint(m, B_rsrv[scenario, t_real-current_time]==delta_t*k*P_rsrv_rt*base.MVA);
-    #                 else
-    #                     ini_fb = max(1, ini);
-    #                     fin_fb = fin-1;
-    #                     length_fb = fin_fb-ini_fb+1;
-    #                     mult_fb = k-length_fb:k-1;
-    #                     temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb];
-    #                     if length_fb >= 2
-    #                         for f_rsrv_fb_n=2:length_fb;
-    #                             temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
-    #                                 mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
-    #                         end
-    #                     end
-    #                     @constraint(m, B_rsrv[scenario, t_real-current_time]==delta_t*k*P_rsrv_rt+delta_t*temp_f_rsrv_c_fb*base.MVA);
-    #                 end
-    #             elseif ini < current_time && fin > current_time
-    #                 if current_time == 1
-    #                     ini_sc = current_time+1;
-    #                     fin_sc = fin;
-    #                     length_sc = fin_sc - ini_sc +1;
-    #                     mult_sc = k-length_sc+1:k;
-    #                     mult_rt = k-length_sc;
-    #                     temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
-    #                     if length_sc > 1
-    #                         for f_rsrv_sc_n=2:length_sc
-    #                             temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
-    #                         end
-    #                     end
-    #                     @constraint(m, B_rsrv[scenario, t_real-current_time] == delta_t*mult_rt*P_rsrv_rt+delta_t*temp_f_rsrv_c_sc*base.MVA);
-    #                 else
-    #                     ini_sc = current_time+1;
-    #                     fin_sc = fin;
-    #                     length_sc = fin_sc - ini_sc +1;
-    #                     mult_sc = k-length_sc+1:k;
-    #                     temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
-    #                     if length_sc > 1
-    #                         for f_rsrv_sc_n=2:length_sc
-    #                             temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
-    #                         end
-    #                     end
-    #                     mult_rt = k-length_sc;
-    #                     ini_fb = max(1, ini);
-    #                     fin_fb = current_time-1;
-    #                     length_fb = fin_fb-ini_fb+1;
-    #                     temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb];
-    #                     if length_fb >= 2
-    #                         for f_rsrv_fb_n=2:length_fb;
-    #                             temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
-    #                                 mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
-    #                         end
-    #                     end
-    #                     @constraint(m, B_rsrv[scenario, t_real-current_time] ==
-    #                     delta_t*mult_rt*P_rsrv_rt+delta_t*temp_f_rsrv_c_sc+delta_t*temp_f_rsrv_c_fb*base.MVA);
-    #                 end
-    #             elseif ini == current_time
-    #                 ini_sc = current_time+1;
-    #                 fin_sc = fin;
-    #                 mult_sc = 2:k;
-    #                 temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time];
-    #                 for f_rsrv_sc_n=2:k-1
-    #                     temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
-    #                 end
-    #                 @constraint(m, B_rsrv[scenario, t_real-current_time] ==delta_t*P_rsrv_rt+delta_t*temp_f_rsrv_c_sc*base.MVA);
-    #             elseif ini > current_time
-    #                 ini_sc = ini;
-    #                 fin_sc = fin;
-    #                 mult_sc = 1:k;
-    #                 temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
-    #                 for f_rsrv_sc_n=2:k
-    #                     temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
-    #                 end
-    #                 @constraint(m, B_rsrv[scenario, t_real-current_time] == delta_t*temp_f_rsrv_c_sc*base.MVA);
-    #                 if  t_real-current_time >= T-tau-1
-    #                     @constraint(m, P_rsrv[scenario, t_real-current_time]==0)
-    #                 end
-    #             end
-    #             @constraint(m, B_rsrv[scenario, t_real-current_time] <= sum(B[scenario, :, t_real-current_time]))
-    #         end
-    #     end
-    # end
+    for scenario = 1:SN
+        for t=1:T-1
+            for shunt=1:NoShunt
+                shuntbMVA = shunt_struct.baseMVA[shunt]
+                if shunt_data.type[shunt] == 1
+                    @constraint(m, Pg_min[shunt, t+1]<=Pg[scenario, shunt ,t]);
+                    @constraint(m, Pg[scenario, shunt,t]<=
+                        positive_scalar(icdf*sqrt(
+                        pd.sigma[shunt,t+1]+pg.sigma[shunt,t+1])/shuntbMVA
+                        +pg.mu[shunt,t+1]/shuntbMVA));
+                    @constraint(m, B_min[shunt,t+1] <= B[scenario,shunt,t]);
+                    @constraint(m, B[scenario,shunt,t]<= B_max[shunt,t+1]);
+                    @constraint(m, R_min[shunt,t+1] <= R[scenario,shunt,t]);
+                    @constraint(m, R[scenario,shunt,t]<= R_max[shunt,t+1]);
+                    if t==1
+                        @constraint(m, B[scenario,shunt,1] ==
+                            B_rt[shunt,1]-
+                            delta_t*(R_rt[shunt,1]*shunt_data.baseMVA[shunt]))
+                    else
+                        @constraint(m, B[scenario,shunt,t] ==
+                            B[scenario,shunt,t-1] -
+                            R[scenario,shunt,t-1]*shunt_data.baseMVA[shunt]*delta_t)
+                    end
+                else
+                    @constraint(m, Pg[scenario, shunt,t]==0);
+                    @constraint(m, B[scenario, shunt,t]==0);
+                    @constraint(m, R[scenario, shunt,t]==0);
+                end
+                @constraint(m, Qf_min[shunt,t+1] <= Qf[scenario,shunt,t]);
+                @constraint(m, Qf[scenario,shunt,t]<= Qf_max[shunt,t+1]);
+            end
+
+            for Bus = 1: NoBus
+                @constraint(m, V_min^2<= v[scenario,Bus,t]);
+                @constraint(m, v[scenario,Bus,t]<= V_max^2);
+                if bus_data.type[Bus]==1
+                    bus_shunt_list = findall(hasshunt->hasshunt==Bus, shunt.find_bus);
+                    if ~isempty(bus_shunt_list)
+                        @constraint(m, P_bus[scenario,Bus,t]==sum(
+                        Pd[shunt,t+1]/shunt_struct.baseMVA[shunt]
+                        -Pg[scenario,shunt,t]-R[scenario,shunt,t]
+                        for shunt in bus_shunt_list));
+                        @constraint(m, Q_bus[scenario,Bus,t]==sum(
+                        Qf[scenario,shunt,t] for shunt in bus_shunt_list));
+                    elseif isempty(bus_shunt_list)
+                        @constraint(m, P_bus[scenario,Bus,t]==0);
+                        @constraint(m, Q_bus[scenario,Bus,t]==0);
+                    end
+                else
+                    gen_out_branch_list=findall(isafbus->isafbus==Bus, branch_data.fbus);
+                    gen_in_branch_list=findall(isafbus->isafbus==Bus, branch_data.tbus);
+                    if ~isempty(gen_out_branch_list) && ~isempty(gen_in_branch_list)
+                        @constraint(m, P_bus[scenario,Bus,t]==
+                            sum(P_br[scenario,branch,t]
+                            for branch in gen_out_branch_list)-
+                            sum(P_br[scenario,branch,t]
+                            for branch in gen_in_branch_list));
+                    elseif ~isempty(gen_out_branch_list) && isempty(gen_in_branch_list)
+                        @constraint(m, P_bus[scenario,Bus,t]==
+                            sum(P_br[scenario,branch,t]
+                            for branch in gen_out_branch_list));
+                    elseif isempty(gen_out_branch_list) && ~isempty(gen_in_branch_list)
+                        @constraint(m, P_bus[scenario,Bus,t]== -
+                            sum(P_br[scenario,branch,t]
+                            for branch in gen_in_branch_list));
+                    end
+                    gen_id_list=findall(isabus->isabus==Bus, gen_data.bus);
+                    gen_id = gen_id_list[1];
+                    @constraint(m,
+                        P_bus[scenario,Bus,t]<=gen_data.Pmax[gen_id]/bus_data.baseMVA[Bus])
+                    @constraint(m,
+                        P_bus[scenario,Bus,t]>=gen_data.Pmin[gen_id]/bus_data.baseMVA[Bus])
+                    @constraint(m,
+                        Q_bus[scenario,Bus,t]<=gen_data.Qmax[gen_id]/bus_data.baseMVA[Bus])
+                    @constraint(m,
+                        Q_bus[scenario,Bus,t]>=gen_data.Qmin[gen_id]/bus_data.baseMVA[Bus])
+                end
+            end
+            for Brh=1:BrN
+                fbus = branch_data.fbus[Brh];
+                tbus = branch_data.tbus[Brh];
+                tbus_branch_list = findall(isafbus->isafbus==tbus, branch_data.fbus);
+                if isempty(tbus in gen_struct.bus)
+                    if ~isempty(tbus_branch_list)
+                        @constraint(m,P_br[scenario,Brh,t]==
+                            P_bus[scenario, tbus, t]
+                            +sum(P_br[scenario,tbus_branch_list[branch],t]
+                            for branch=1:length(tbus_branch_list)));
+
+                        @constraint(m,Q_br[scenario,Brh,1]==
+                            Q_bus[scenario,tbus, t]
+                            +sum(P_br[scenario,tbus_branch_list[branch],t]
+                             for branch=1:length(tbus_branch_list)));
+                    else
+                        @constraint(m,P_br[scenario,Brh,t]==
+                            P_bus[scenario, tbus, t]);
+
+                        @constraint(m,Q_br[scenario,Brh,1]==
+                            Q_bus[scenario,tbus, t]);
+                    end
+                end
+
+                @constraint(m,v[scenario,tbus,t]==
+                v[scenario,fbus,t]-
+                2*(r[Brh]*P_br[scenario,Brh,t]+x[Brh]*Q_br[scenario,Brh,t]));
+            end
+        end
+    end
+    ###########################################################################
+    # variables and Constraints for reserve markets
+    if ancillary_type == "10min" || ancillary_type == "30min"
+        # RT
+        @variable(m, P_rsrv_rt)
+        @variable(m, B_rsrv_rt)
+        @constraint(m, P_rsrv_rt>=0)
+        @constraint(m, B_rsrv_rt>=0)
+        if current_time <= tau
+            @constraint(m, B_rsrv_rt==0)
+        elseif current_time - tau>=1
+            ini_fb = max(current_time-tau-k+1,1);
+            fni_fb = current_time-tau;
+            length_fb = fni_fb - ini_fb +1;
+            mult_fb = k-length_fb+1:k;
+            temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb]
+            if length_fb >= 2
+                for f_rsrv_fb_n=2:length_fb;
+                    temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
+                        mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
+                end
+            end
+            @constraint(m, B_rsrv_rt==delta_t*temp_f_rsrv_c_fb*base.MVA)
+        end
+        @constraint(m, B_rsrv_rt <= sum(B_rt))
+        # Scenario
+        @variable(m, P_rsrv[1:SN,1:T-1])
+        @variable(m, B_rsrv[1:SN,1:T-1])
+        for scenario=1:SN
+            for t_real=current_time+1:current_time+T-1
+                @constraint(m, P_rsrv[scenario, t_real-current_time]>=0)
+                @constraint(m, B_rsrv[scenario, t_real-current_time]>=0)
+                ini = t_real-tau-k+1;
+                fin = t_real-tau;
+                if fin <=0
+                    @constraint(m, B_rsrv[scenario, t_real-current_time]==0)
+                elseif fin < current_time && fin>=1
+                    ini_fb = max(1,ini);
+                    fin_fb = fin;
+                    length_fb = fin_fb-ini_fb+1;
+                    mult_fb = k-length_fb+1:k;
+                    temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb];
+                    if length_fb >= 2
+                        for f_rsrv_fb_n=2:length_fb;
+                            temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
+                                mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
+                        end
+                    end
+                    @constraint(m, B_rsrv[scenario, t_real-current_time]==delta_t*temp_f_rsrv_c_fb*base.MVA);
+                elseif fin == current_time
+                    if current_time == 1
+                        @constraint(m, B_rsrv[scenario, t_real-current_time]==delta_t*k*P_rsrv_rt*base.MVA);
+                    else
+                        ini_fb = max(1, ini);
+                        fin_fb = fin-1;
+                        length_fb = fin_fb-ini_fb+1;
+                        mult_fb = k-length_fb:k-1;
+                        temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb];
+                        if length_fb >= 2
+                            for f_rsrv_fb_n=2:length_fb;
+                                temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
+                                    mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
+                            end
+                        end
+                        @constraint(m, B_rsrv[scenario, t_real-current_time]==delta_t*k*P_rsrv_rt+delta_t*temp_f_rsrv_c_fb*base.MVA);
+                    end
+                elseif ini < current_time && fin > current_time
+                    if current_time == 1
+                        ini_sc = current_time+1;
+                        fin_sc = fin;
+                        length_sc = fin_sc - ini_sc +1;
+                        mult_sc = k-length_sc+1:k;
+                        mult_rt = k-length_sc;
+                        temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
+                        if length_sc > 1
+                            for f_rsrv_sc_n=2:length_sc
+                                temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
+                            end
+                        end
+                        @constraint(m, B_rsrv[scenario, t_real-current_time] == delta_t*mult_rt*P_rsrv_rt+delta_t*temp_f_rsrv_c_sc*base.MVA);
+                    else
+                        ini_sc = current_time+1;
+                        fin_sc = fin;
+                        length_sc = fin_sc - ini_sc +1;
+                        mult_sc = k-length_sc+1:k;
+                        temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
+                        if length_sc > 1
+                            for f_rsrv_sc_n=2:length_sc
+                                temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
+                            end
+                        end
+                        mult_rt = k-length_sc;
+                        ini_fb = max(1, ini);
+                        fin_fb = current_time-1;
+                        length_fb = fin_fb-ini_fb+1;
+                        temp_f_rsrv_c_fb = mult_fb[1]*P_rsrv_feedback[ini_fb];
+                        if length_fb >= 2
+                            for f_rsrv_fb_n=2:length_fb;
+                                temp_f_rsrv_c_fb = temp_f_rsrv_c_fb+
+                                    mult_fb[f_rsrv_fb_n]*P_rsrv_feedback[ini_fb-1+f_rsrv_fb_n];
+                            end
+                        end
+                        @constraint(m, B_rsrv[scenario, t_real-current_time] ==
+                        delta_t*mult_rt*P_rsrv_rt+delta_t*temp_f_rsrv_c_sc+delta_t*temp_f_rsrv_c_fb*base.MVA);
+                    end
+                elseif ini == current_time
+                    ini_sc = current_time+1;
+                    fin_sc = fin;
+                    mult_sc = 2:k;
+                    temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time];
+                    for f_rsrv_sc_n=2:k-1
+                        temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
+                    end
+                    @constraint(m, B_rsrv[scenario, t_real-current_time] ==delta_t*P_rsrv_rt+delta_t*temp_f_rsrv_c_sc*base.MVA);
+                elseif ini > current_time
+                    ini_sc = ini;
+                    fin_sc = fin;
+                    mult_sc = 1:k;
+                    temp_f_rsrv_c_sc = mult_sc[1]*P_rsrv[scenario, ini_sc-current_time]
+                    for f_rsrv_sc_n=2:k
+                        temp_f_rsrv_c_sc=temp_f_rsrv_c_sc+mult_sc[f_rsrv_sc_n]*P_rsrv[scenario, ini_sc-1+f_rsrv_sc_n-current_time];
+                    end
+                    @constraint(m, B_rsrv[scenario, t_real-current_time] == delta_t*temp_f_rsrv_c_sc*base.MVA);
+                    if  t_real-current_time >= T-tau-1
+                        @constraint(m, P_rsrv[scenario, t_real-current_time]==0)
+                    end
+                end
+                @constraint(m, B_rsrv[scenario, t_real-current_time] <= sum(B[scenario, :, t_real-current_time]))
+            end
+        end
+    end
     if ancillary_type == "10min" || ancillary_type == "30min"
         @objective(m, Min,
             fn_cost_RHC_anc(delta_t,P_bus_rt,P_bus,Pg_rt,Pg,P_rsrv_rt,
@@ -546,6 +546,71 @@ function optimal_NYISO(NoShunt, SN, current_time, obj, ancillary_type,
     time_solve=MOI.get(m, MOI.SolveTime());
     println(string("    ----Solve Time: ", time_solve))
     println(string("    ----Optimal Cost: ", cost_o))
+
+    ###############
+    R_rt_o=JuMP.value.(R_rt)
+    R_o=JuMP.value.(R)
+    R_traj = hcat(R_rt_o, R_o[1,:,:])
+    ################
+    B_rt_o=JuMP.value.(B_rt)
+    B_o=JuMP.value.(B)
+    B_traj = hcat(B_rt_o, B_o[1,:,:])
+    ###############
+    Pg_rt_o=JuMP.value.(Pg_rt)
+    Pg_o=JuMP.value.(Pg)
+    Pg_traj = hcat(Pg_rt_o, Pg_o[1,:,:])
+
+    ############
+    P_bus_rt_o=JuMP.value.(P_bus_rt)
+    P_bus_o=JuMP.value.(P_bus)
+
+    ############
+    P_gen_rt_o=JuMP.value.(P_gen_rt)
+    P_gen_rt_o=JuMP.value.(P_gen)
+    P_gen_traj = hcat(sum(P_bus_rt_o), P_bus_o[1,:,:])
+    ############
+    if ancillary_type == "10min" || ancillary_type == "30min"
+        P_rsrv_rt_o=JuMP.value(P_rsrv_rt);
+        P_rsrv_s=JuMP.value.(P_rsrv);
+        P_rsrv_total = hcat(P_rsrv_rt_o[1,1], reshape(P_rsrv_s[1,:], 1, 287));
+        B_rsrv_rt_o=JuMP.value(B_rsrv_rt);
+        B_rsrv_s=JuMP.value.(B_rsrv);
+        B_rsrv_total = hcat(B_rsrv_rt_o[1,1], reshape(B_rsrv_s[1,:], 1, 287));
+    else
+        P_rsrv_rt_o = 0;
+        P_rsrv_total = zeros(1,T);
+        B_rsrv_rt_o = 0;
+    end
+    # println
+    if sum(Pg_rt_o)<=sum(pg.mu_ct)
+    ############
+        Cost_real = delta_t*(P_bus_rt_o[1,1]*price.lambda_ct
+            +beta*(sum(Pg_rt_o)-sum(pg.mu_ct)))*base.MVA-
+            delta_t*P_rsrv_rt_o*price.alpha_ct;
+    else
+        Cost_real = delta_t*(P_bus_rt_o[1,1]*price.lambda_ct
+            +price.lambda_ct*(sum(Pg_rt_o)-sum(pg.mu_ct)))*base.MVA-
+            delta_t*P_rsrv_rt_o*price.alpha_ct;
+    end
+   # println(price.alpha_ct)
+    P_cul = sum(pg.mu_ct)-sum(Pg_rt_o)
+    println("curtailment solar")
+    println(P_cul)
+    alpha_1 = price.alpha_scenario[1,:]
+    lambda_1 = price.lambda_scenario[1,:]
+
+    println(string("    ----Optimzal cost at this instance: ", Cost_real))
+    pg_upper = hcat(
+    icdf*sqrt.(pd.sigma[:,:]+pg.sigma[:,:])+pg.mu[:,:])
+
+    return val_opt = (R=(R_rt_o), B=(B_rt_o), Pg=(Pg_rt_o),
+        P_bus=(P_bus_rt_o), P_rsrv=(P_rsrv_rt_o), B_rsrv=(B_rsrv_rt_o),
+        Cost_real=(Cost_real), time_solve=(time_solve),
+        P_rsrv_total=(P_rsrv_total), B_rsrv_total=(B_rsrv_total), alpha_1=(alpha_1),
+        R_traj = (R_traj), B_traj=(B_traj), Pg_traj=(Pg_traj), P_bus_traj=(P_bus_traj),
+        P0_traj = (P_bus_traj[1,:]), pg_upper=(pg_upper), lambda_1=(lambda_1),
+        pd=(pd), pg=(pg), terminate_s = (terminate_s), P_cul = (P_cul))
+end
     # ## obtaining value
     # Pg_rt_o=JuMP.value.(Pg_rt)
     # Pg_rt_s=JuMP.value.(Pg)
@@ -564,7 +629,7 @@ function optimal_NYISO(NoShunt, SN, current_time, obj, ancillary_type,
     #     println(P_bus_rt_o[gen_list[gen], 1]*baseMVA[gen_list[gen]])
     #     println(baseMVA[gen_list[gen]])
     # end
-    P_gen_rt_o=JuMP.value.(P_gen_rt)
+
     # println(P_gen_rt_o)
     # println(size(P_br_rt))
     # P_br_rt_o=JuMP.value.(P_br_rt)

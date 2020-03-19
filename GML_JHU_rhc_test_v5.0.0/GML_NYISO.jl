@@ -40,7 +40,7 @@ function GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, bus_struct,
     R_min = -R_max;
     # println(R_max[:,1])
     # println(R_min[:,1])
-    W = zeros(NoShunt, T);
+    W = zeros(NoBus, T);
     #
     # ancillary
     if ancillary_type == "10min"
@@ -548,27 +548,87 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     end
     #
     status=optimize!(m);
-
-
-
-    #
     println(string("    ----", termination_status(m)))
+    terminate_s = termination_status(m);
     # println(MOI.PrimalStatus())
     # println(MOI.DualStatus())
     cost_o = JuMP.objective_value(m);
     time_solve=MOI.get(m, MOI.SolveTime());
     println(string("    ----Solve Time: ", time_solve))
     println(string("    ----Optimal Cost: ", cost_o))
-    P_gen_rt_o = JuMP.value.(P_gen_rt);
-    P_gen_sum_ct = sum(P_gen_rt_o[gen, 1]*baseMVA for gen in 1:NoGen)
-    println(string("aggregate generation: ", P_gen_sum_ct))
 
-    R_rt_o = JuMP.value.(R_rt);
+    println(string("    ----aggregate demand: ", baseMVA*sum(Pd[:,1])))
+    ###############
+    R_rt_o=JuMP.value.(R_rt)
+    R_o=JuMP.value.(R)
     R_sum_ct = sum(R_rt_o[:, 1]*baseMVA)
-    println(string("aggregate battery disharge: ", R_sum_ct))
+    println(string("    ----aggregate battery disharge: ", R_sum_ct))
+    R_traj = hcat(R_rt_o, R_o[1,:,:])
+    ################
+    B_rt_o=JuMP.value.(B_rt)
+    B_o=JuMP.value.(B)
+    B_traj = hcat(B_rt_o, B_o[1,:,:])
+    ###############
+    Pg_rt_o=JuMP.value.(Pg_rt)
+    Pg_o=JuMP.value.(Pg)
+    Pg_traj = hcat(Pg_rt_o, Pg_o[1,:,:])
 
-    println(string("aggregate demand: ", baseMVA*sum(Pd[:,1])))
-    return 0
+    ############
+    # P_bus_rt_o=JuMP.value.(P_bus_rt)
+    # P_bus_o=JuMP.value.(P_bus)
+
+    ############
+    P_gen_rt_o=JuMP.value.(P_gen_rt)
+    P_gen_o=JuMP.value.(P_gen)
+    P_gen_traj = hcat(sum(P_gen_rt_o), sum(P_gen_o[1,:,:], dims=1))
+
+    P_gen_sum_ct = sum(P_gen_rt_o[gen, 1]*baseMVA for gen in 1:NoGen)
+    println(string("    ----aggregate generation: ", P_gen_sum_ct))
+    ############
+    if ancillary_type == "10min" || ancillary_type == "30min"
+        P_rsrv_rt_o=JuMP.value(P_rsrv_rt);
+        P_rsrv_s=JuMP.value.(P_rsrv);
+        P_rsrv_total = hcat(P_rsrv_rt_o[1,1], reshape(P_rsrv_s[1,:], 1, 287));
+        B_rsrv_rt_o=JuMP.value(B_rsrv_rt);
+        B_rsrv_s=JuMP.value.(B_rsrv);
+        B_rsrv_total = hcat(B_rsrv_rt_o[1,1], reshape(B_rsrv_s[1,:], 1, 287));
+    else
+        P_rsrv_rt_o = 0;
+        P_rsrv_total = zeros(1,T);
+        B_rsrv_rt_o = 0;
+        P_rsrv_total = zeros(1,T);
+    end
+    # println
+    if sum(Pg_rt_o)<=sum(pg.mu_ct)
+    ############
+        Cost_real = delta_t*(sum(P_gen_rt_o)*price.lambda_ct
+            +beta*(sum(Pg_rt_o)-sum(pg.mu_ct)))*baseMVA-
+            delta_t*P_rsrv_rt_o*price.alpha_ct;
+    else
+        Cost_real = delta_t*(sum(P_gen_rt_o)*price.lambda_ct
+            +price.lambda_ct*(sum(Pg_rt_o)-sum(pg.mu_ct)))*baseMVA-
+            delta_t*P_rsrv_rt_o*price.alpha_ct;
+    end
+   # println(price.alpha_ct)
+    P_cul = sum(pg.mu_ct)-sum(Pg_rt_o)
+    println(string("    ----curtailment solar: ", P_cul))
+    alpha_1 = price.alpha_scenario[1,:]
+    lambda_1 = price.lambda_scenario[1,:]
+
+    println(string("    ----Optimzal cost at this instance: ", Cost_real))
+    pg_upper = hcat(
+    icdf*sqrt.(pd.sigma[:,:]+pg.sigma[:,:])+pg.mu[:,:])
+
+    val_opt = (R=(R_rt_o), B=(B_rt_o), Pg=(Pg_rt_o),
+        P_gen=(P_gen_rt_o), P_rsrv=(P_rsrv_rt_o), B_rsrv=(B_rsrv_rt_o),
+        Cost_real=(Cost_real), time_solve=(time_solve),
+        P_rsrv_total=(P_rsrv_total), B_rsrv_total=(B_rsrv_total), alpha_1=(alpha_1),
+        R_traj = (R_traj), B_traj=(B_traj), Pg_traj=(Pg_traj), P_gen_traj=(P_gen_traj),
+        P0_traj = (P_gen_traj), pg_upper=(pg_upper), lambda_1=(lambda_1),
+        pd=(pd), pg=(pg), terminate_s = (terminate_s), P_cul = (P_cul))
+
+
+    return val_opt
 end
 
 
