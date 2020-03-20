@@ -1,8 +1,7 @@
 function GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, bus_struct,
-    shunt_struct, branch_struct, gen_struct, baseMVA)
+    branch_struct, gen_struct, baseMVA)
     println("===== GML - Boundaries Buildup");
     ###############################################################################
-    # shunt level
     T=288;
     NoBus = length(bus_struct.baseKV)
     NoBr = length(branch_struct.id)
@@ -33,7 +32,6 @@ function GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, bus_struct,
     Pg_min = zeros(NoBus, T);
     B_max = reshape(bus_struct.frac*B_cap, NoBus, 1)*ones(1, T);
     # println(sum(B_max)/288)
-    # B_max = zeros(NoShunt, T)
     B_min = zeros(NoBus, T);
     R_rate = 1/3;
     R_max = R_rate*B_max/baseMVA;
@@ -78,7 +76,7 @@ function GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, bus_struct,
 end
 
 function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
-    feedback, pd, pg, price, shunt_struct, bus_struct, branch_struct, gen_struct);
+    feedback, pd, pg, price, bus_struct, branch_struct, gen_struct);
 
     println("===== GML - Optimization ")
     T=obj.T;
@@ -156,11 +154,11 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
         @constraint(m, Qf_rt[bus,1]<=Qf_max[bus,1]);
         @constraint(m, V_min^2<= v_rt[bus,1]);
         @constraint(m, v_rt[bus,1]<= V_max^2);
-        add_branch_list = findall(one->one==1, C_ind[bus,:])
-        sub_branch_list = findall(minusone->minusone==-1, C_ind[bus,:])
+        sub_branch_list = findall(one->one==1, C_ind[bus,:]) # Out
+        add_branch_list = findall(minusone->minusone==-1, C_ind[bus,:]) #In
         @constraint(m, P_bus_rt[bus,1]==
-        -Pd[bus,1]
-        +Pg_rt[bus,1]+R_rt[bus,1]);
+        Pd[bus,1]
+        -(Pg_rt[bus,1]+R_rt[bus,1]));
 
         if bus_struct.type[bus]==1
             if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
@@ -193,25 +191,25 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                 @constraint(m, P_bus_rt[bus,1]==
                     sum(P_br_rt[branch,1] for branch in add_branch_list)
                     -sum(P_br_rt[branch,1] for branch in sub_branch_list)
-                    -P_gen_rt[gen_id[1], 1]);
+                    +P_gen_rt[gen_id[1], 1]);
                 @constraint(m, Q_bus_rt[bus,1]==
                     sum(Q_br_rt[branch,1] for branch in add_branch_list)
                     -sum(Q_br_rt[branch,1] for branch in sub_branch_list)
-                    -Q_gen_rt[gen_id[1], 1]);
+                    +Q_gen_rt[gen_id[1], 1]);
             elseif ~isempty(add_branch_list) && isempty(sub_branch_list)
                 @constraint(m, P_bus_rt[bus,1]==
                     sum(P_br_rt[branch,1] for branch in add_branch_list)
-                    -P_gen_rt[gen_id[1], 1]);
+                    +P_gen_rt[gen_id[1], 1]);
                 @constraint(m, Q_bus_rt[bus,1]==
                     sum(Q_br_rt[branch,1] for branch in add_branch_list)
-                    -Q_gen_rt[gen_id[1], 1]);
+                    +Q_gen_rt[gen_id[1], 1]);
             elseif isempty(add_branch_list) && ~isempty(sub_branch_list)
                 @constraint(m, P_bus_rt[bus,1]==
                     -sum(P_br_rt[branch,1] for branch in sub_branch_list)
-                    -P_gen_rt[gen_id[1], 1]);
+                    +P_gen_rt[gen_id[1], 1]);
                 @constraint(m, Q_bus_rt[bus,1]==
                     -sum(Q_br_rt[branch,1] for branch in sub_branch_list)
-                    -Q_gen_rt[gen_id[1], 1]);
+                    +Q_gen_rt[gen_id[1], 1]);
             end
         end
     end
@@ -223,16 +221,16 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     end
 
 
-    for Gen=1:NoGen
-        @constraint(m,
-            P_gen_rt[Gen,1]<=gen_struct.Pmax[Gen]/baseMVA)
-        @constraint(m,
-            P_gen_rt[Gen,1]>=gen_struct.Pmin[Gen]/baseMVA)
-        @constraint(m,
-            Q_gen_rt[Gen,1]<=gen_struct.Qmax[Gen]/baseMVA)
-        @constraint(m,
-            Q_gen_rt[Gen,1]>=gen_struct.Qmin[Gen]/baseMVA)
-    end
+    # for Gen=1:NoGen
+    #     @constraint(m,
+    #         P_gen_rt[Gen,1]<=gen_struct.Pmax[Gen]/baseMVA)
+    #     @constraint(m,
+    #         P_gen_rt[Gen,1]>=gen_struct.Pmin[Gen]/baseMVA)
+    #     @constraint(m,
+    #         Q_gen_rt[Gen,1]<=gen_struct.Qmax[Gen]/baseMVA)
+    #     @constraint(m,
+    #         Q_gen_rt[Gen,1]>=gen_struct.Qmin[Gen]/baseMVA)
+    # end
 
     # bus
     @variable(m, Pg[1:SN, 1:NoBus, 1:T-1]); # the real power output
@@ -274,11 +272,11 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                 @constraint(m, v[scenario,bus,t]<= V_max^2);
 
                 @constraint(m,  P_bus[scenario,bus,t]==
-                -Pd[bus,t+1]
-                +Pg[scenario,bus,t]+R[scenario, bus,t]);
+                Pd[bus,t+1]
+                -Pg[scenario,bus,t]-R[scenario, bus,t]);
 
-                add_branch_list = findall(one->one==1, C_ind[bus,:])
-                sub_branch_list = findall(minusone->minusone==-1, C_ind[bus,:])
+                sub_branch_list = findall(one->one==1, C_ind[bus,:]) # out
+                add_branch_list = findall(minusone->minusone==-1, C_ind[bus,:]) # In
 
                 if bus_struct.type[bus]==1
                     if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
@@ -312,27 +310,27 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                         @constraint(m, P_bus[scenario,bus,t]==
                             sum(P_br[scenario,branch,t] for branch in add_branch_list)
                             -sum(P_br[scenario,branch,t] for branch in sub_branch_list)
-                            -P_gen[scenario,gen_id[1],t]);
+                            +P_gen[scenario,gen_id[1],t]);
                         @constraint(m, Q_bus[scenario,bus,t]==
                             sum(Q_br[scenario,branch,t] for branch in add_branch_list)
                             -sum(Q_br[scenario,branch,t] for branch in sub_branch_list)
-                            -Q_gen[scenario,gen_id[1],t]);
+                            +Q_gen[scenario,gen_id[1],t]);
 
                     elseif ~isempty(add_branch_list) && isempty(sub_branch_list)
                         @constraint(m, P_bus[scenario,bus,t]==
                             sum(P_br[scenario,branch,t] for branch in add_branch_list)
-                            -P_gen[scenario,gen_id[1],t]);
+                            +P_gen[scenario,gen_id[1],t]);
                         @constraint(m, Q_bus[scenario,bus,t]==
                             sum(Q_br[scenario,branch,t] for branch in add_branch_list)
-                            -Q_gen[scenario,gen_id[1],t]);
+                            +Q_gen[scenario,gen_id[1],t]);
 
                     elseif isempty(add_branch_list) && ~isempty(sub_branch_list)
-                        @constraint(m, P_bus[scenario,bus,t]==
+                        @constraint(m, -P_bus[scenario,bus,t]==
                             -sum(P_br[scenario,branch,t] for branch in sub_branch_list)
-                            -P_gen[scenario,gen_id[1],t]);
-                        @constraint(m, Q_bus[scenario,bus,t]==
+                            +P_gen[scenario,gen_id[1],t]);
+                        @constraint(m, -Q_bus[scenario,bus,t]==
                             -sum(Q_br[scenario,branch,t] for branch in sub_branch_list)
-                            -Q_gen[scenario,gen_id[1],t]);
+                            +Q_gen[scenario,gen_id[1],t]);
                     end
                 end
             end
@@ -343,16 +341,16 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                     2*(r[branch]*P_br[scenario,branch,t]
                     +x[branch]*Q_br[scenario,branch,t]))
             end
-            for Gen=1:NoGen
-                @constraint(m,
-                    P_gen[scenario,Gen,t]<=gen_struct.Pmax[Gen]/baseMVA)
-                @constraint(m,
-                    P_gen[scenario,Gen,t]>=gen_struct.Pmin[Gen]/baseMVA)
-                @constraint(m,
-                    Q_gen[scenario,Gen,t]<=gen_struct.Qmax[Gen]/baseMVA)
-                @constraint(m,
-                    Q_gen[scenario,Gen,t]>=gen_struct.Qmin[Gen]/baseMVA)
-            end
+            # for Gen=1:NoGen
+            #     @constraint(m,
+            #         P_gen[scenario,Gen,t]<=gen_struct.Pmax[Gen]/baseMVA)
+            #     @constraint(m,
+            #         P_gen[scenario,Gen,t]>=gen_struct.Pmin[Gen]/baseMVA)
+            #     @constraint(m,
+            #         Q_gen[scenario,Gen,t]<=gen_struct.Qmax[Gen]/baseMVA)
+            #     @constraint(m,
+            #         Q_gen[scenario,Gen,t]>=gen_struct.Qmin[Gen]/baseMVA)
+            # end
         end
     end
 
@@ -555,7 +553,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     cost_o = JuMP.objective_value(m);
     time_solve=MOI.get(m, MOI.SolveTime());
     println(string("    ----Solve Time: ", time_solve))
-    println(string("    ----Optimal Cost: ", cost_o))
+    println(string("    ----Optimal Cost of the RHC: ", cost_o))
 
     println(string("    ----aggregate demand: ", baseMVA*sum(Pd[:,1])))
     ###############
@@ -574,8 +572,9 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     Pg_traj = hcat(Pg_rt_o, Pg_o[1,:,:])
 
     ############
-    # P_bus_rt_o=JuMP.value.(P_bus_rt)
-    # P_bus_o=JuMP.value.(P_bus)
+    P_bus_rt_o=JuMP.value.(P_bus_rt)
+    P_bus_o=JuMP.value.(P_bus)
+    P_bus_traj = hcat(P_bus_rt_o, P_bus_o[1,:,:])
 
     ############
     P_gen_rt_o=JuMP.value.(P_gen_rt)
@@ -596,7 +595,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
         P_rsrv_rt_o = 0;
         P_rsrv_total = zeros(1,T);
         B_rsrv_rt_o = 0;
-        P_rsrv_total = zeros(1,T);
+        B_rsrv_total = zeros(1,T);
     end
     # println
     if sum(Pg_rt_o)<=sum(pg.mu_ct)
@@ -619,13 +618,14 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     pg_upper = hcat(
     icdf*sqrt.(pd.sigma[:,:]+pg.sigma[:,:])+pg.mu[:,:])
 
-    val_opt = (R=(R_rt_o), B=(B_rt_o), Pg=(Pg_rt_o),
-        P_gen=(P_gen_rt_o), P_rsrv=(P_rsrv_rt_o), B_rsrv=(B_rsrv_rt_o),
+    val_opt = (R=(R_rt_o), B=(B_rt_o), Pg=(Pg_rt_o), P_gen=(P_gen_rt_o),
+        P_rsrv=(P_rsrv_rt_o), B_rsrv=(B_rsrv_rt_o), P_bus=(P_bus_rt_o),
         Cost_real=(Cost_real), time_solve=(time_solve),
         P_rsrv_total=(P_rsrv_total), B_rsrv_total=(B_rsrv_total), alpha_1=(alpha_1),
         R_traj = (R_traj), B_traj=(B_traj), Pg_traj=(Pg_traj), P_gen_traj=(P_gen_traj),
-        P0_traj = (P_gen_traj), pg_upper=(pg_upper), lambda_1=(lambda_1),
-        pd=(pd), pg=(pg), terminate_s = (terminate_s), P_cul = (P_cul))
+        P0_traj = (P_gen_traj), P_bus_traj=(P_bus_traj), pg_upper=(pg_upper),
+        lambda_1=(lambda_1), pd=(pd), pg=(pg),
+        terminate_s = (terminate_s), P_cul = (P_cul))
 
 
     return val_opt
@@ -734,7 +734,7 @@ function fn_cost_RHC_anc(delta_t, P_gen, P_gen_rt, Pg_rt,Pg, P_rsrv_rt,
     Final_cost = (Cost_P_gen_sum_ct+Cost_P_gen_sum_scenario
         +Cost_Pg_ct_diff+Cost_Pg_scenario_diff
         -Revenue_P_rsrv_ct-Revenue_P_rsrv_scenario)
-
+    # Final_cost = (Cost_P_gen_sum_ct)
     return Final_cost
 end
 

@@ -89,6 +89,7 @@ pg_raw = read_NY_solar_data(shunt_struct, bus_struct)
 # #
 current_time=1;
 p_rate = 0.5;
+# B_cap = 150;
 B_cap = 150;
 ct_printout = string("===== Solar ", p_rate, " Battery ", B_cap);
 println("=================================================")
@@ -126,23 +127,24 @@ pg = pg_traj_pu_det(current_time, pg_raw, p_rate, T, NoBus, baseMVA);
 # plot(1:288, reshape(sum(pg.mu, dims=1), 288,1), label="traj")
 
 obj = GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, bus_struct,
-    shunt_struct, branch_struct, gen_struct, baseMVA);
+	branch_struct, gen_struct, baseMVA);
 B_feedback = zeros(NoBus, 1)
-# P_rsrv_feedback = [];
-# feedback = (B_feedback=(B_feedback ),P_rsrv_feedback=(P_rsrv_feedback));
+P_rsrv_feedback = [];
+feedback = (B_feedback=(B_feedback ),P_rsrv_feedback=(P_rsrv_feedback));
 #
 
 val_opt = optimal_NYISO(SN, current_time, obj, ancillary_type, baseMVA,
-    feedback, pd, pg, price, shunt_struct, bus_struct, branch_struct, gen_struct);
+    feedback, pd, pg, price, bus_struct, branch_struct, gen_struct);
 
-plot(1:288, reshape(val_opt.lambda_1,288,1), label="lambda1", linewidth=2)
+println("=================================================")
+# plot(1:288, reshape(val_opt.lambda_1,288,1), label="lambda1", linewidth=2)
 # plot!(1:288, reshape(sum(pd.traj, dims=1)*100,288,1), label="Pd", linewidth=2)
 # plot!(1:288, reshape(sum(pg.mu, dims=1)*100,288,1), label="Pg aval", linewidth=2)
 # plot!(1:288, reshape(sum(val_opt.pg_upper, dims=1)*110,288,1), label="Pg upper", linewidth=2)
 # plot!(1:288, reshape(sum(val_opt.P0_traj, dims=1)*100,288,1), label="P0", linewidth=2)
 # plot!(1:288, reshape(sum(val_opt.Pg_traj, dims=1)*100,288,1), label="Pg", linewidth=2)
-plot!(1:288, reshape(sum(val_opt.R_traj, dims=1)*100,288,1), label="R", linewidth=2)
-plot!(1:288, reshape(sum(val_opt.B_traj, dims=1),288,1), label="B", linewidth=2)
+# plot!(1:288, reshape(sum(val_opt.R_traj, dims=1)*100,288,1), label="R", linewidth=2)
+# plot!(1:288, reshape(sum(val_opt.B_traj, dims=1),288,1), label="B", linewidth=2)
 
 # plot(1:576, reshape(sum(pd_raw.pd_rt, dims=1),576,1), label="rt", linewidth=2)
 # plot(1:576, reshape(sum(pd_raw.pd_da, dims=1),576,1), label="da", linewidth=2)
