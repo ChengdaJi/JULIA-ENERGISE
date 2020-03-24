@@ -4,7 +4,7 @@ function GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, bus_struct,
     ###############################################################################
     T=288;
     NoBus = length(bus_struct.baseKV)
-    NoBr = length(branch_struct.id)
+    NoBr = length(branch_struct.fbus)
     Qf_max = zeros(NoBus,T)
     Qf_min = zeros(NoBus,T)
     for bus = 1:NoBus
@@ -62,8 +62,8 @@ function GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, bus_struct,
 
     C_ind = zeros(NoBus, NoBr)
     for branch = 1:NoBr
-        C_ind[branch_struct.fbus[branch], branch]=1;
-        C_ind[branch_struct.tbus[branch], branch]=-1;
+        C_ind[Int(branch_struct.fbus[branch]), branch]=1;
+        C_ind[Int(branch_struct.tbus[branch]), branch]=-1;
     end
     # println(C_ind)
     println("===== GML - finish building boundaries =====")
@@ -115,8 +115,8 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     P_rsrv_feedback = feedback.P_rsrv_feedback;
 
     NoBus = length(bus_struct.baseKV)
-    NoBr = length(branch_struct.id)
-    NoGen = length(gen_struct.id)
+    NoBr = length(branch_struct.fbus)
+    NoGen = length(gen_struct.Pmax)
     # NoGen=length(gen_data.id)
 
     m = Model(with_optimizer(Mosek.Optimizer, QUIET=true,
@@ -335,8 +335,8 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                 end
             end
             for branch =1:NoBr
-                fbus = branch_struct.fbus[branch];
-                tbus = branch_struct.tbus[branch];
+                fbus = Int(branch_struct.fbus[branch]);
+                tbus = Int(branch_struct.tbus[branch]);
                 @constraint(m, v[scenario,fbus,t]-v[scenario,tbus,t]==
                     2*(r[branch]*P_br[scenario,branch,t]
                     +x[branch]*Q_br[scenario,branch,t]))
@@ -588,15 +588,13 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     P_bus_rt_o=JuMP.value.(P_bus_rt)
     P_bus_o=JuMP.value.(P_bus)
     P_bus_traj = hcat(P_bus_rt_o, P_bus_o[1,:,:])
-    println(string("    ----aggregate reactive on bus: ",
-        sum(P_bus_traj)))
 
     ############
     Q_bus_rt_o=JuMP.value.(Q_bus_rt)
     Q_bus_o=JuMP.value.(Q_bus)
     Q_bus_traj = hcat(Q_bus_rt_o, Q_bus_o[1,:,:])
     println(string("    ----aggregate reactive on bus: ",
-        sum(Q_bus_traj)))
+        sum(Q_gen_traj)))
 
     ############
     P_gen_rt_o=JuMP.value.(P_gen_rt)
@@ -667,7 +665,6 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
 end
 
 
-
 function fn_cost_RHC_rt(delta_t, P_gen, P_gen_rt, Pg_rt,Pg, price,
     pg, pd, beta, SN, obj, gen_struct, bus_struct, branch_struct, baseMVA)
 
@@ -676,7 +673,7 @@ function fn_cost_RHC_rt(delta_t, P_gen, P_gen_rt, Pg_rt,Pg, price,
 
 
     sum_prob = sum(price.probability[1:SN]);
-    NoGen = length(gen_struct.id);
+    NoGen = length(gen_struct.Pmax);
 
     ################### Generation Cost ###################
     # At current time
@@ -723,7 +720,7 @@ function fn_cost_RHC_anc(delta_t, P_gen, P_gen_rt, Pg_rt,Pg, P_rsrv_rt,
 
 
     sum_prob = sum(price.probability[1:SN]);
-    NoGen = length(gen_struct.id);
+    NoGen = length(gen_struct.Pmax);
 
     ################### Generation Cost ###################
     # At current time
@@ -775,6 +772,127 @@ function fn_cost_RHC_anc(delta_t, P_gen, P_gen_rt, Pg_rt,Pg, P_rsrv_rt,
 end
 
 
+
+
+
+
+
+
+function read_price_data()
+    filename = "../data/trace_feb28_2019.csv"
+    data_trace = CSV.File(filename; dateformat="yyyy-mm-dd") |> DataFrame
+    time_stamp = collect(data_trace[:,Symbol("RTD End Time Stamp")])
+    ten_min_price = collect(data_trace[:,Symbol("RTD 10 Min Non Sync")])
+    thirty_min_price = collect(data_trace[:,Symbol("RTD 30 Min Non Sync")])
+    rt_lbmp = collect(data_trace[:, Symbol("Real Time LBMP")])
+    da_lbmp = collect(data_trace[:, Symbol("Day Ahead LBMP")])
+    price_raw = (timestamp = (time_stamp), RSRV_10=(ten_min_price),
+        RSRV_30=(thirty_min_price), LMP_RT=(rt_lbmp), LMP_DA=(da_lbmp));
+    return price_raw
+end
+
+###############################
+function read_NY_demand_data(bus)
+    # P=shunt.P;
+    NoBus = length(bus.baseKV)
+    demand_unit=matread("../data/NYISO-data/normalized_demand.mat")["normalized_demand"]
+    n = size(demand_unit)
+    demand_bus = zeros(n[2], n[1])
+    for i = 1 : n[1]
+        demand_bus[:,i] = reshape(demand_unit[i,:],(n[2], 1))
+    end
+    frac = bus.frac
+
+    for i = 1 : NoBus
+        demand_bus[i,:] = demand_bus[i,:] .* frac[i]
+    end
+
+    demand_bus = demand_bus[1:NoBus,:]
+
+    demand_da_bus = zeros(NoBus, n[1])
+
+    # demand_da_bus
+
+    # demand=zeros(length(P),576)
+    # for n_shunt=1:length(P)
+    #     demand[n_shunt,:] = reshape(
+    #     demand_unit[:, n_shunt].*(576).*P[n_shunt].*0.7, 1,576);
+    # end
+    #
+    # demand_da_unit=matread("../data/NYISO-data/normalized_demand_da.mat")["normalized_demand_da"]
+    # demand_da=zeros(length(P),576)
+    # for n_shunt=1:length(P)
+    #     demand_da[n_shunt,:] = reshape(
+    #     demand_da_unit[:, n_shunt].*(576).*P[n_shunt].*0.7, 1,576);
+    # end
+    #
+    # demand_bus = zeros(NoBus, 576)
+    # demand_da_bus = zeros(NoBus, 576)
+    #
+    # for bus = 1:NoBus
+    #     shunt_list = findall(inbus->inbus==bus, shunt.find_bus)
+    #     if isempty(shunt_list)
+    #         demand_bus[bus, :]=zeros(1, 576)
+    #         demand_da_bus[bus, :]=zeros(1, 576)
+    #     else
+    #         demand_bus[bus, :] = sum(demand[shunt, :] for shunt in shunt_list)
+    #         demand_da_bus[bus, :] = sum(demand_da[shunt, :] for shunt in shunt_list)
+    #     end
+    # end
+    #
+    pd_raw = (pd_rt = (demand_bus), pd_da = (demand_da_bus));
+    return pd_raw
+end
+
+###################################
+function read_NY_solar_data(bus)
+    # P=shunt.P;
+    NoBus = length(bus.baseKV);
+    solar_unit=matread("../data/NYISO-data/normalized_solar.mat")["normalized_solar"]
+    n = size(solar_unit)
+    solar_bus = zeros(n[2], n[1])
+    for i = 1 : n[1]
+        solar_bus[:,i] = reshape(solar_unit[i,:],(n[2], 1))
+    end
+    frac = bus.frac
+
+    for i = 1 : NoBus
+        solar_bus[i,:] = solar_bus[i,:] .* frac[i]
+    end
+
+    solar_bus = solar_bus[1:NoBus,:]
+
+    solar_da_bus = zeros(NoBus, n[1])
+
+    # solar=zeros(length(P),576)
+    # for n_shunt=1:length(P)
+    #     solar[n_shunt,:] = reshape(
+    #     solar_unit[:, n_shunt].*(576).*P[n_shunt].*0.7, 1,576);
+    # end
+    #
+    # solar_da_unit=matread("../data/NYISO-data/normalized_solar_da.mat")["normalized_solar_da"]
+    # solar_da=zeros(length(P),576)
+    # for n_shunt=1:length(P)
+    #     solar_da[n_shunt,:] = reshape(
+    #     solar_da_unit[:, n_shunt].*(576).*P[n_shunt].*0.7, 1,576);
+    # end
+    # solar_bus = zeros(NoBus, 576)
+    # solar_da_bus = zeros(NoBus, 576)
+    # for bus = 1:NoBus
+    #     shunt_list = findall(inbus->inbus==bus, shunt.find_bus)
+    #     if isempty(shunt_list)
+    #         solar_bus[bus, :]=zeros(1, 576)
+    #         solar_da_bus[bus, :]=zeros(1, 576)
+    #     else
+    #         solar_bus[bus, :] = sum(solar[shunt, :] for shunt in shunt_list)
+    #         solar_da_bus[bus, :] = sum(solar_da[shunt, :] for shunt in shunt_list)
+    #     end
+    # end
+    pg_raw = (pg_rt = (solar_bus), pg_da = (solar_da_bus));
+    return pg_raw
+end
+
+
 function write_branch_real_output(val_opt)
     output = hcat(val_opt.P_br_traj)
     CSV.write("branch_flow_real_power_output.csv", DataFrame(output));
@@ -808,100 +926,24 @@ end
 function write_generator_real_output(val_opt)
     output = hcat(val_opt.P_gen_traj)
     CSV.write("gen_real_output.csv", DataFrame(output));
-    println("    ---- Finish gen real files! ")
+    println("    ---- Finish bus files! ")
 end
 
 function write_generator_reactive_output(val_opt)
     output = hcat(val_opt.Q_gen_traj)
     CSV.write("gen_reactive_output.csv", DataFrame(output));
-    println("    ---- Finish gen reactive files! ")
+    println("    ---- Finish bus files! ")
 end
 
 
+function get_multiplier(gen_struct, pd_raw)
+    p_max = sum(gen_struct.Pmax)
+    pd_max   = maximum(sum(pd_raw.pd_rt, dims=1))
+    multiplier = p_max/(pd_max)
 
-function read_price_data()
-    filename = "../data/trace_feb28_2019.csv"
-    data_trace = CSV.File(filename; dateformat="yyyy-mm-dd") |> DataFrame
-    time_stamp = collect(data_trace[:,Symbol("RTD End Time Stamp")])
-    ten_min_price = collect(data_trace[:,Symbol("RTD 10 Min Non Sync")])
-    thirty_min_price = collect(data_trace[:,Symbol("RTD 30 Min Non Sync")])
-    rt_lbmp = collect(data_trace[:, Symbol("Real Time LBMP")])
-    da_lbmp = collect(data_trace[:, Symbol("Day Ahead LBMP")])
-    price_raw = (timestamp = (time_stamp), RSRV_10=(ten_min_price),
-        RSRV_30=(thirty_min_price), LMP_RT=(rt_lbmp), LMP_DA=(da_lbmp));
-    return price_raw
+    return multiplier
 end
 
-function read_NY_demand_data(shunt, bus)
-    P=shunt.P;
-    NoBus = length(bus.baseKV)
-
-
-    demand_unit=matread("../data/NYISO-data/normalized_demand.mat")["normalized_demand"]
-    demand=zeros(length(P),576)
-    for n_shunt=1:length(P)
-        demand[n_shunt,:] = reshape(
-        demand_unit[:, n_shunt].*(576).*P[n_shunt].*0.7, 1,576);
-    end
-
-    demand_da_unit=matread("../data/NYISO-data/normalized_demand_da.mat")["normalized_demand_da"]
-    demand_da=zeros(length(P),576)
-    for n_shunt=1:length(P)
-        demand_da[n_shunt,:] = reshape(
-        demand_da_unit[:, n_shunt].*(576).*P[n_shunt].*0.7, 1,576);
-    end
-
-    demand_bus = zeros(NoBus, 576)
-    demand_da_bus = zeros(NoBus, 576)
-
-    for bus = 1:NoBus
-        shunt_list = findall(inbus->inbus==bus, shunt.find_bus)
-        if isempty(shunt_list)
-            demand_bus[bus, :]=zeros(1, 576)
-            demand_da_bus[bus, :]=zeros(1, 576)
-        else
-            demand_bus[bus, :] = sum(demand[shunt, :] for shunt in shunt_list)
-            demand_da_bus[bus, :] = sum(demand_da[shunt, :] for shunt in shunt_list)
-        end
-    end
-
-    pd_raw = (pd_rt = (demand_bus), pd_da = (demand_da_bus));
-    return pd_raw
-end
-
-function read_NY_solar_data(shunt, bus)
-    P=shunt.P;
-    NoBus = length(bus.baseKV);
-
-
-    solar_unit=matread("../data/NYISO-data/normalized_solar.mat")["normalized_solar"]
-    solar=zeros(length(P),576)
-    for n_shunt=1:length(P)
-        solar[n_shunt,:] = reshape(
-        solar_unit[:, n_shunt].*(576).*P[n_shunt].*0.7, 1,576);
-    end
-
-    solar_da_unit=matread("../data/NYISO-data/normalized_solar_da.mat")["normalized_solar_da"]
-    solar_da=zeros(length(P),576)
-    for n_shunt=1:length(P)
-        solar_da[n_shunt,:] = reshape(
-        solar_da_unit[:, n_shunt].*(576).*P[n_shunt].*0.7, 1,576);
-    end
-    solar_bus = zeros(NoBus, 576)
-    solar_da_bus = zeros(NoBus, 576)
-    for bus = 1:NoBus
-        shunt_list = findall(inbus->inbus==bus, shunt.find_bus)
-        if isempty(shunt_list)
-            solar_bus[bus, :]=zeros(1, 576)
-            solar_da_bus[bus, :]=zeros(1, 576)
-        else
-            solar_bus[bus, :] = sum(solar[shunt, :] for shunt in shunt_list)
-            solar_da_bus[bus, :] = sum(solar_da[shunt, :] for shunt in shunt_list)
-        end
-    end
-    pg_raw = (pg_rt = (solar_bus), pg_da = (solar_da_bus));
-    return pg_raw
-end
 
 function positive_array(Array_)
     for row=1:length(Array_[:,1])

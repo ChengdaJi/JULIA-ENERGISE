@@ -136,6 +136,15 @@ feedback = (B_feedback=(B_feedback ),P_rsrv_feedback=(P_rsrv_feedback));
 val_opt = optimal_NYISO(SN, current_time, obj, ancillary_type, baseMVA,
     feedback, pd, pg, price, bus_struct, branch_struct, gen_struct);
 
+write_branch_real_output(val_opt)
+write_branch_reactive_output(val_opt)
+write_bus_real_output(val_opt)
+write_bus_reactive_output(val_opt)
+write_bus_voltage_output(val_opt)
+write_generator_real_output(val_opt)
+write_generator_reactive_output(val_opt)
+
+
 println("=================================================")
 # plot(1:288, reshape(val_opt.lambda_1,288,1), label="lambda1", linewidth=2)
 # plot!(1:288, reshape(sum(pd.traj, dims=1)*100,288,1), label="Pd", linewidth=2)
