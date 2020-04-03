@@ -152,8 +152,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
         @constraint(m, B_rt[bus,1]==B_feedback[bus,1]);
         @constraint(m, Qf_min[bus,1]<=Qf_rt[bus,1]);
         @constraint(m, Qf_rt[bus,1]<=Qf_max[bus,1]);
-        @constraint(m, V_min^2<= v_rt[bus,1]);
-        @constraint(m, v_rt[bus,1]<= V_max^2);
+        
         sub_branch_list = findall(one->one==1, C_ind[bus,:]) # Out
         add_branch_list = findall(minusone->minusone==-1, C_ind[bus,:]) #In
         @constraint(m, P_bus_rt[bus,1]==
@@ -161,6 +160,8 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
         -(Pg_rt[bus,1]+R_rt[bus,1]));
 
         if bus_struct.type[bus]==1
+            @constraint(m, V_min^2<= v_rt[bus,1]);
+            @constraint(m, v_rt[bus,1]<= V_max^2);
             if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
 
                 @constraint(m, P_bus_rt[bus,1]==
@@ -185,6 +186,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                     -sum(Q_br_rt[branch,1] for branch in sub_branch_list));
             end
         else
+            @constraint(m, v_rt[bus,1]==1);
             gen_id = findall(bus_id ->bus_id == bus, gen_struct.bus);
             if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
 
@@ -279,6 +281,8 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                 add_branch_list = findall(minusone->minusone==-1, C_ind[bus,:]) # In
 
                 if bus_struct.type[bus]==1
+                    @constraint(m, V_min^2<= v[scenario,bus,t]);
+                    @constraint(m, v[scenario,bus,t]<= V_max^2);
                     if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
                         @constraint(m, P_bus[scenario,bus,t]==
                             sum(P_br[scenario,branch,t] for branch in add_branch_list)
@@ -305,6 +309,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                             );
                     end
                 else
+                    @constraint(m, v[scenario,bus,t]== 1);
                     gen_id = findall(bus_id ->bus_id == bus, gen_struct.bus);
                     if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
                         @constraint(m, P_bus[scenario,bus,t]==
@@ -335,8 +340,8 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                 end
             end
             for branch =1:NoBr
-                fbus = Int(branch_struct.fbus[branch]);
-                tbus = Int(branch_struct.tbus[branch]);
+                fbus = branch_struct.fbus[branch];
+                tbus = branch_struct.tbus[branch];
                 @constraint(m, v[scenario,fbus,t]-v[scenario,tbus,t]==
                     2*(r[branch]*P_br[scenario,branch,t]
                     +x[branch]*Q_br[scenario,branch,t]))

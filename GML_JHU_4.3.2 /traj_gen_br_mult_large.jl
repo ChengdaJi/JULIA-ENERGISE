@@ -17,38 +17,64 @@ function price_traj(t, ancillary_type, price_raw, delta_rt_raw, T, Pred_length)
         alpha_ct=0;
         alpha_scenario=zeros(Pred_scen,T);
     elseif ancillary_type == "10min"
-        alpha_rt=price_raw.RSRV_10[t];
-        alpha_ct=price_raw.RSRV_10[t+1];
-        # for t ==  4
-        # elseif t == 
-        delta_rt_add = zeros(Pred_scen, Pred_length)
-        for scenario = 1: Pred_scen
-            for time_slot = 1:Pred_length
-                if delta_rt_raw["RSRV10centroid"][PTID,t][scenario,time_slot] <=5
-                    delta_rt_add = 0;
-                else
-                    delta_rt_add = delta_rt_raw["RSRV10centroid"][PTID,t][scenario,time_slot];
-                end
-            end
-        end
-        # alpha_pd=alpha_rt.+delta_rt_raw["RSRV10centroid"][PTID,t][:,1:Pred_length];
+        # alpha_rt=price_raw.RSRV_10[t];
+        # alpha_ct=price_raw.RSRV_10[t+1];
+        alpha_rt = 500;
+        alpha_ct = 500;
+        alpha_pd=alpha_rt.+delta_rt_raw["RSRV10centroid"][PTID,t][:,1:Pred_length];
         alpha_scenario=hcat(alpha_pd, zeros(Pred_scen,T-Pred_length));
         # alpha_scenario = 50*ones(Pred_scen, T)
         # println(sum(alpha_scenario))
     elseif ancillary_type == "30min"
         alpha_rt=price_raw.RSRV_30[t];
         alpha_ct=price_raw.RSRV_30[t+1];
-        for scenario = 1: Pred_scen
-            for time_slot = 1:Pred_length
-                if delta_rt_raw["RSRV30centroid"][PTID,t][scenario,time_slot] <=5
-                    delta_rt_add = 0;
-                else
-                    delta_rt_add = delta_rt_raw["RSRV30centroid"][PTID,t][scenario,time_slot];
-                end
-            end
-        end
+        alpha_pd=alpha_rt.+delta_rt_raw["RSRV30centroid"][PTID,t][:,1:Pred_length];
+        alpha_scenario=hcat(alpha_pd,zeros(Pred_scen,T-Pred_length));
+    end
+    probability=delta_rt_raw["probability"][PTID,t];
 
-        # alpha_pd=alpha_rt.+delta_rt_raw["RSRV30centroid"][PTID,t][:,1:Pred_length];
+    price = (lambda_ct=(lambda_ct), lambda_scenario = (lambda_scenario),
+        alpha_ct=(alpha_ct), alpha_scenario=(alpha_scenario),
+        probability=(probability))
+
+    return price;
+end
+
+function price_traj_alt(t, ancillary_type, price_raw, delta_rt_raw, T, Pred_length)
+# this function generates the price trajectory
+    PTID=3;
+    lambda_rt=price_raw.LMP_RT[t+1]
+    lambda_ct=price_raw.LMP_RT[t+1]
+    # lambda_rt=price_raw["lambda_rt"][t]
+    lambda_pd=lambda_rt.+delta_rt_raw["RTcentroid"][PTID,t][:,1:Pred_length];
+    Pred_scen=length(lambda_pd[:,1]);
+
+    # println(size(lambda_pd))
+    lambda_da=price_raw.LMP_DA[t+Pred_length+1:t+T-1];
+    # lambda_da=price_raw["lambda_da"][t+Pred_length+1:t+T-1];
+    # println(size(lambda_da))
+    lambda_offline=ones(Pred_scen,1)*reshape(lambda_da, 1, length(lambda_da));
+    lambda_scenario = hcat(ones(Pred_scen,1)*lambda_ct, lambda_pd,lambda_offline);
+    if ancillary_type == "without"
+        alpha_ct=0;
+        alpha_scenario=zeros(Pred_scen,T);
+    elseif ancillary_type == "10min"
+
+        alpha_rt=price_raw.RSRV_10[t+1];
+        alpha_ct=price_raw.RSRV_10[t+1];
+        # if t == 1
+        #     alpha_rt = 50
+        #     alpha_ct = 50
+        # end
+
+        alpha_pd=alpha_rt.+delta_rt_raw["RSRV10centroid"][PTID,t][:,1:Pred_length];
+        alpha_scenario=hcat(ones(Pred_scen,1)*alpha_ct, alpha_pd, zeros(Pred_scen,T-Pred_length-1));
+        # alpha_scenario = 50*ones(Pred_scen, T)
+        # println(sum(alpha_scenario))
+    elseif ancillary_type == "30min"
+        alpha_rt=price_raw.RSRV_30[t];
+        alpha_ct=price_raw.RSRV_30[t+1];
+        alpha_pd=alpha_rt.+delta_rt_raw["RSRV30centroid"][PTID,t][:,1:Pred_length];
         alpha_scenario=hcat(alpha_pd,zeros(Pred_scen,T-Pred_length));
     end
     probability=delta_rt_raw["probability"][PTID,t];
