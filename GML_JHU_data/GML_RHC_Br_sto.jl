@@ -1133,7 +1133,7 @@ function fn_cost_RHC_anc_Peak(delta_t,P_bus_rt,P_bus,Pg_rt,Pg,P_rsrv_rt, Scp,
     println(string("    ----Case: Real-time Balancing and ", ancillary_type," Reserve Market"))
 
     Final_cost = ((Cost_P_gen_sum_ct+Cost_P_gen_sum_scenario
-        +Cost_Pg_ct_diff+Cost_Pg_scenario_diff+5650*Scp[1,1])*base.MVA
+        +Cost_Pg_ct_diff+Cost_Pg_scenario_diff+200000*Scp[1,1])*base.MVA
         -Revenue_P_rsrv_ct-Revenue_P_rsrv_scenario[1,1])
     return Final_cost
 end

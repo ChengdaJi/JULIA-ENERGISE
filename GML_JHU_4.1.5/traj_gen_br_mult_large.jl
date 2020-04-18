@@ -19,8 +19,7 @@ function price_traj(t, ancillary_type, price_raw, delta_rt_raw, T, Pred_length)
     elseif ancillary_type == "10min"
         alpha_rt=price_raw.RSRV_10[t];
         alpha_ct=price_raw.RSRV_10[t+1];
-        # for t ==  4
-        # elseif t == 
+
         delta_rt_add = zeros(Pred_scen, Pred_length)
         for scenario = 1: Pred_scen
             for time_slot = 1:Pred_length

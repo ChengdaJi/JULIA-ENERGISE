@@ -1,6 +1,7 @@
-function price_traj(t, ancillary_type, price_raw, delta_rt_raw, T, Pred_length)
+function price_traj(t, ancillary_type, price_raw, delta_rt_raw, T, Pred_length, SN)
 # this function generates the price trajectory
     PTID=3;
+    probability=delta_rt_raw["probability"][PTID,t];
     lambda_rt=price_raw.LMP_RT[t]
     lambda_ct=price_raw.LMP_RT[t+1]
     # lambda_rt=price_raw["lambda_rt"][t]
@@ -51,7 +52,7 @@ function price_traj(t, ancillary_type, price_raw, delta_rt_raw, T, Pred_length)
         alpha_pd=alpha_rt.+delta_rt_raw["RSRV30centroid"][PTID,t][:,1:Pred_length];
         alpha_scenario=hcat(alpha_pd,zeros(Pred_scen,T-Pred_length));
     end
-    probability=delta_rt_raw["probability"][PTID,t];
+    
 
     price = (lambda_ct=(lambda_ct), lambda_scenario = (lambda_scenario),
         alpha_ct=(alpha_ct), alpha_scenario=(alpha_scenario),

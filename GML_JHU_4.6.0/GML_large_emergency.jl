@@ -24,7 +24,7 @@ function GML_large_emergency(ancillary_type, T, BN, SN,
             P_rsrv_feedback = read_RSRV_out()
         end
 
-        price = price_traj_alt(current_time, ancillary_type,
+        price = price_traj(current_time, ancillary_type,
             price_raw, delta_rt_raw, T, pred_length);
 
         pd = pd_traj_large(current_time, pd_raw, pd_noise, T, pred_length, base,multiplier);
