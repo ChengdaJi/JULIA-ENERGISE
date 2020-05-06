@@ -86,13 +86,14 @@ function pd_traj(t, pd_raw, pd_noise, BN,T, Pred_length)
     return pd
 end
 
-function pd_traj_pu_det(t, pd_raw, T, NoBus, baseMVA,multiplier)
+function pd_traj_pu_det(t, pd_raw, T, NoBus, baseMVA, multiplier)
     # this function generates the demand trajectory
     traj=zeros(NoBus, 288)
     da = zeros(NoBus, 288)
     for bus=1:NoBus
-        traj[bus, :]=pd_raw.pd_rt[bus, t+1:t+T]*multiplier/baseMVA;
-        da[bus, :]=pd_raw.pd_da[bus,t+1:t+T]/baseMVA;
+        # println(multiplier.feeder_mult[bus])
+        traj[bus, :]=pd_raw.pd_rt[bus, t+1:t+T]*multiplier.bus_mult[1,bus]/baseMVA;
+        da[bus, :]=pd_raw.pd_da[bus,t+1:t+T]*multiplier.bus_mult[1,bus]/baseMVA;
     end
     ct=traj[:,1]
     sigma = zeros(NoBus, T);
@@ -132,7 +133,8 @@ end
 function pg_traj_pu_det(t, pg_raw, p_rate, T, NoBus, baseMVA, multiplier);
     #########
     #parameter_pd_pg=1.0417852280636593;
-    parameter_pd_pg= multiplier*sum(pd_raw.pd_rt[:,1:288])/sum(pg_raw.pg_rt[:,1:288]) #for first 288 slots
+    parameter_pd_pg=multiplier.total_demand_mult*
+    sum(pd_raw.pd_rt[:,1:288])/sum(pg_raw.pg_rt[:,1:288]) #for first 288 slots
     #########
     rt_raw = p_rate*pg_raw.pg_rt*parameter_pd_pg;
     da_raw = p_rate*pg_raw.pg_da*parameter_pd_pg;

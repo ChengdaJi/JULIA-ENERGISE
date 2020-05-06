@@ -67,6 +67,7 @@ function bus_data()
    ];
 
    baseKV = (bus[:,10]);
+   Pd_max = (bus[:,3])
 
    bus_sum_pd = (bus[:,3]);
    frac = bus_sum_pd./sum(bus_sum_pd);
@@ -75,7 +76,7 @@ function bus_data()
    # println(frac)
    # println(sum(frac))
    # println(size(frac))
-   return bus = (baseKV = (baseKV), type=(type), frac=(frac))
+   return bus = (baseKV = (baseKV), Pd_max=(Pd_max), type=(type), frac=(frac))
 end
 
 function branch_data()
@@ -127,7 +128,7 @@ function gen_data()
 ## Pmax(9)	Pmin(10)	Pc1(11)	Pc2(12)	Qc1min(13)	Qc1max(14)	Qc2min(15)
 ## Qc2max(16)	ramp_agc(17)	ramp_10(18)	ramp_30(19)	ramp_q(20)	apf(21)
     gen = [
-    1  0.0000  0.0000  999  -999  1.0500  100  1   9  0  0  0  0  0  0  0  0  0  0  0  0
+    1  0.0000  0.0000  999  -999  1.0500  100  1   999  0  0  0  0  0  0  0  0  0  0  0  0
     ];
 
 
@@ -146,4 +147,27 @@ function gen_data()
     # Qmax = collect(data_trace_gen[:,Symbol("Qmax")]);
     return gen = (bus= (bus), Pmin= (Pmin), Pmax= (Pmax),Qmin= (Qmin),
     Qmax= (Qmax))
+end
+
+function demand_multiplier(bus_struct, pd_raw)
+    # p_max = sum(bus_struct.Pd_max)
+    # println(p_max)
+    # raw_data_max = maximum(sum(pd_raw.pd_rt[:,1:288], dims=1));
+    # total_demand_mult = p_max/(raw_data_max);
+    # println(total_demand_mult)
+    # feeder_mult = bus_struct.Pd_max/p_max*total_demand_mult;
+    # println(sum(feeder_mult))
+    # println(size(feeder_mult))
+    # # println(feeder_mult)
+    # println(total_demand_mult*maximum(sum(pd_raw.pd_rt, dims=1)))
+    NoBus=length(bus_struct.Pd_max)
+    bus_mult = zeros(1,NoBus)
+    for bus=1:NoBus
+        if bus_struct.Pd_max[bus]==0
+            bus_mult[1,bus] = 0;
+        else
+            bus_mult[1,bus] = bus_struct.Pd_max[bus]/maximum(pd_raw.pd_rt[bus,:]);
+        end
+    end
+    return multiplier = (bus_mult=(bus_mult), total_demand_mult=(sum(bus_mult)))
 end
