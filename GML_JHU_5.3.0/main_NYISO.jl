@@ -89,7 +89,7 @@ multiplier = demand_multiplier(bus_struct, pd_raw)
 
 ###########################################################################
 # #
-current_time=1;
+current_time=10;
 p_rate = 0;
 # B_cap = 150;
 B_cap = 0;
@@ -132,24 +132,20 @@ pg = pg_traj_pu_det(current_time, pg_raw, p_rate, T, NoBus, baseMVA, multiplier)
 ################################################################################
 # for ploting solars
 ################################################################################
-# # println(size(pg.mu))
-# # println(size(pg.sigma))
-# # println(size(pg.mu_ct))
+# println(size(pg.mu))
+# println(size(pg.sigma))
+# println(size(pg.mu_ct))
 # # println(sum(pg.mu)/sum(pd.traj))
 # # plot(1:288, reshape(sum(pg.mu, dims=1), 288,1), label="traj")
 ################################################################################
 obj = GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, bus_struct,
 	branch_struct, gen_struct, baseMVA);
-B_feedback = zeros(NoBus, 1)
-P_rsrv_feedback = [];
-feedback = (B_feedback=(B_feedback ),P_rsrv_feedback=(P_rsrv_feedback));
-#
 
-val_opt = optimal_NYISO_SOCP(SN, current_time, obj, ancillary_type, baseMVA,
-    feedback, pd, pg, price, bus_struct, branch_struct, gen_struct);
-
-# val_opt = optimal_NYISO(SN, current_time, obj, ancillary_type, baseMVA,
+# val_opt = optimal_NYISO_SOCP(SN, current_time, obj, ancillary_type, baseMVA,
 #     feedback, pd, pg, price, bus_struct, branch_struct, gen_struct);
+
+val_opt = optimal_NYISO(SN, current_time, obj, ancillary_type, baseMVA,
+    feedback, pd, pg, price, bus_struct, branch_struct, gen_struct);
 
 write_branch_real_output(val_opt)
 write_branch_reactive_output(val_opt)

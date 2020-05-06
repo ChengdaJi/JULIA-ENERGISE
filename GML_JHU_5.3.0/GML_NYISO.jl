@@ -254,13 +254,13 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     # box constraint on generator
     for Gen=1:NoGen
         @constraint(m,
-            P_gen_rt[Gen,t]<=gen_struct.Pmax[Gen]/baseMVA)
+            P_gen_rt[Gen,1]<=gen_struct.Pmax[Gen]/baseMVA)
         @constraint(m,
-            P_gen_rt[Gen,t]>=gen_struct.Pmin[Gen]/baseMVA)
+            P_gen_rt[Gen,1]>=gen_struct.Pmin[Gen]/baseMVA)
         @constraint(m,
-            Q_gen_rt[Gen,t]<=gen_struct.Qmax[Gen]/baseMVA)
+            Q_gen_rt[Gen,1]<=gen_struct.Qmax[Gen]/baseMVA)
         @constraint(m,
-            Q_gen_rt[Gen,t]>=gen_struct.Qmin[Gen]/baseMVA)
+            Q_gen_rt[Gen,1]>=gen_struct.Qmin[Gen]/baseMVA)
     end
 
     # bus
@@ -844,10 +844,10 @@ function fn_cost_RHC_anc(delta_t, P_gen, P_gen_rt, Pg_rt,Pg, P_rsrv_rt,
         for scenario in 1:SN)
         );
 
-    # Final_cost = (Cost_P_gen_sum_ct+Cost_P_gen_sum_scenario
-    #     +Cost_Pg_ct_diff+Cost_Pg_scenario_diff
-    #     -Revenue_P_rsrv_ct-Revenue_P_rsrv_scenario)
-    Final_cost = (Cost_P_gen_sum_ct)
+    Final_cost = (Cost_P_gen_sum_ct+Cost_P_gen_sum_scenario
+        +Cost_Pg_ct_diff+Cost_Pg_scenario_diff
+        -Revenue_P_rsrv_ct-Revenue_P_rsrv_scenario)
+    # Final_cost = (Cost_P_gen_sum_ct)
     return Final_cost
 end
 
@@ -1073,6 +1073,7 @@ function optimal_NYISO_SOCP(SN, t, obj, ancillary_type, baseMVA,
 
     B_feedback = feedback.B_feedback;
     P_rsrv_feedback = feedback.P_rsrv_feedback;
+    # println(size(feedback.P_rsrv_feedback))
 
     NoBus = length(bus_struct.baseKV)
     NoBr = length(branch_struct.fbus)
@@ -1116,9 +1117,9 @@ function optimal_NYISO_SOCP(SN, t, obj, ancillary_type, baseMVA,
         @constraint(m, B_rt[bus,1]==B_feedback[bus,1]);
 
         # SOC constrains on real and reactive power on bus
-        maxS_rt = sqrt(1+Q_gamma^2)*(Pd[bus,1]+R_max[bus,1]-
+        maxS_rt = sqrt(1+Q_gamma^2)*(Pd[bus,1]-R_max[bus,1]-
         positive_scalar(
-        icdf*sqrt(pd.sigma[bus,1]+pg.sigma[bus,1])));
+        icdf*sqrt(pd.sigma[bus,1]+pg.sigma[bus,1])+pg.mu[bus,1]));
         if maxS_rt>=0
             @constraint(m,
             [maxS_rt, 0.5*maxS_rt,
@@ -1208,10 +1209,6 @@ function optimal_NYISO_SOCP(SN, t, obj, ancillary_type, baseMVA,
             #         -sum(Q_br_rt[branch,1] for branch in sub_branch_list)
             #         +Q_gen_rt[gen_id[1], 1]);
             # end
-
-            # @constraint(m, P_bus_rt[bus,1]==
-            # Pd[bus,1]
-            # -(Pg_rt[bus,1]+R_rt[bus,1])-P_gen_rt[gen_id[1], 1]);
         end
     end
     # voltage constraint for LinDistFlow
@@ -1263,10 +1260,6 @@ function optimal_NYISO_SOCP(SN, t, obj, ancillary_type, baseMVA,
             Q_gen_rt[Gen,1]<=gen_struct.Qmax[Gen]/baseMVA)
         @constraint(m,
             Q_gen_rt[Gen,1]>=gen_struct.Qmin[Gen]/baseMVA)
-        # @constraint(m,
-        #     Q_gen_rt[Gen,1]<=1)
-        # @constraint(m,
-        #     Q_gen_rt[Gen,1]>=-1)
     end
 
     # bus
@@ -1317,12 +1310,15 @@ function optimal_NYISO_SOCP(SN, t, obj, ancillary_type, baseMVA,
                 -Pg[scenario,bus,t]-R[scenario, bus,t]);
 
                 # SOC constrains on real and reactive power on bus
+                # maxS = sqrt(1+Q_gamma^2)*(Pd[bus,t+1]-positive_scalar(
+                # icdf*sqrt(pd.sigma[bus,t+1]+pg.sigma[bus,t+1])+pg.mu[bus,t+1])
+                # -R_max[bus,t+1]);
                 maxS = sqrt(1+Q_gamma^2)*(Pd[bus,t+1]-positive_scalar(
                 icdf*sqrt(pd.sigma[bus,t+1]+pg.sigma[bus,t+1])+pg.mu[bus,t+1])
                 -R_max[bus,t+1]);
                 if maxS >=0
                     @constraint(m,
-                    [maxS,maxS, P_bus[scenario,bus,t], Q_bus[scenario,bus,t]]
+                    [maxS, 0.5*maxS, P_bus[scenario,bus,t], Q_bus[scenario,bus,t]]
                      in RotatedSecondOrderCone())
                 else
                     @constraint(m,
@@ -1434,10 +1430,10 @@ function optimal_NYISO_SOCP(SN, t, obj, ancillary_type, baseMVA,
             for Gen=1:NoGen
                 tbus_branch_list = findall(isafbus->isafbus==1, branch_struct.fbus[:,1]);
                 @constraint(m,
-                    P_gen[scenario,Gen,t] ==
+                    P_gen[scenario,Gen,t] == P_bus[scenario,1,t]+
                     sum(P_br[scenario,branch,t] for branch in tbus_branch_list));
                 @constraint(m,
-                    Q_gen[scenario,Gen,t] ==
+                    Q_gen[scenario,Gen,t] == Q_bus[scenario,1,t]+
                     sum(Q_br[scenario,branch,t] for branch in tbus_branch_list));
                 @constraint(m,
                     P_gen[scenario,Gen,t]<=gen_struct.Pmax[Gen]/baseMVA)
@@ -1549,7 +1545,7 @@ function optimal_NYISO_SOCP(SN, t, obj, ancillary_type, baseMVA,
                                  delta_t*k*P_rsrv_rt
                                  +floor(delta_t*temp_f_rsrv_c_fb*1000)/1000);
                         end
-                     elseif ini < current_time && fin > current_time
+                    elseif ini < current_time && fin > current_time
                         if current_time == 1
                             ini_sc = current_time+1;
                             fin_sc = fin;
@@ -1631,9 +1627,9 @@ function optimal_NYISO_SOCP(SN, t, obj, ancillary_type, baseMVA,
                     @constraint(m, B_rsrv[scenario, t_real-current_time]
                          <= sum(B[scenario, :, t_real-current_time]))
 
-               end
-           end
-        end
+                end
+            end
+    end
     # #
 
     if ancillary_type == "10min" || ancillary_type == "30min"
@@ -1732,29 +1728,29 @@ function optimal_NYISO_SOCP(SN, t, obj, ancillary_type, baseMVA,
     # println(sum(Pd[:,1]))
     # println(P_gen_o[1,1,1])
     # println(sum(Pd[:,2]))
-    for branch =1:NoBr
-        println(string("branch",branch))
-        t=2;
-        scenario=1;
-        fbus = Int(branch_struct.fbus[branch]);
-        tbus = Int(branch_struct.tbus[branch]);
-        tbus_branch_list = findall(isafbus->isafbus==tbus, branch_struct.fbus[:,1]);
-        if isempty(tbus_branch_list)
-            println(P_br_o[scenario,branch,t]-
-            r[branch]*l_br_o[scenario,branch,t]-P_bus_o[scenario, tbus, t])
-            println(P_br_o[scenario,branch,t])
-            println(r[branch]*l_br_o[scenario,branch,t])
-            println(P_bus_o[scenario, tbus, t])
-        else
-            println(P_br_o[scenario,branch,t]-
-            r[branch]*l_br_o[scenario,branch,t]-P_bus_o[scenario, tbus, t]
-            -sum(P_br_o[scenario,branch,t] for branch in tbus_branch_list))
-            println(P_br_o[scenario,branch,t])
-            println(r[branch]*l_br_o[scenario,branch,t])
-            println(P_bus_o[scenario, tbus, t])
-            println(sum(P_br_o[scenario,branch,t] for branch in tbus_branch_list))
-        end
-    end
+    # for branch =1:NoBr
+    #     println(string("branch",branch))
+    #     t=2;
+    #     scenario=1;
+    #     fbus = Int(branch_struct.fbus[branch]);
+    #     tbus = Int(branch_struct.tbus[branch]);
+    #     tbus_branch_list = findall(isafbus->isafbus==tbus, branch_struct.fbus[:,1]);
+    #     if isempty(tbus_branch_list)
+    #         println(P_br_o[scenario,branch,t]-
+    #         r[branch]*l_br_o[scenario,branch,t]-P_bus_o[scenario, tbus, t])
+    #         println(P_br_o[scenario,branch,t])
+    #         println(r[branch]*l_br_o[scenario,branch,t])
+    #         println(P_bus_o[scenario, tbus, t])
+    #     else
+    #         println(P_br_o[scenario,branch,t]-
+    #         r[branch]*l_br_o[scenario,branch,t]-P_bus_o[scenario, tbus, t]
+    #         -sum(P_br_o[scenario,branch,t] for branch in tbus_branch_list))
+    #         println(P_br_o[scenario,branch,t])
+    #         println(r[branch]*l_br_o[scenario,branch,t])
+    #         println(P_bus_o[scenario, tbus, t])
+    #         println(sum(P_br_o[scenario,branch,t] for branch in tbus_branch_list))
+    #     end
+    # end
     # println(sum(P_bus_o[1,:,1]))
     # println(sum(Pd[:,2]))
     # println("print voltage constraint")
@@ -1793,6 +1789,7 @@ function optimal_NYISO_SOCP(SN, t, obj, ancillary_type, baseMVA,
         B_rsrv_rt_o = 0;
         B_rsrv_total = zeros(1,T);
     end
+    # println(P_rsrv_rt_o)
     # println
     if sum(Pg_rt_o)<=sum(pg.mu_ct)
     ############

@@ -45,6 +45,7 @@ function price_traj_det(t, ancillary_type, price_raw, T)
         alpha_scenario=zeros(6,T);
     elseif ancillary_type == "10min"
         alpha_ct=price_raw.RSRV_10[t+1];
+        # println(alpha_ct)
         alpha_scenario=ones(6,1)*reshape(price_raw.RSRV_10[t+1:t+T], 1, T);
     elseif ancillary_type == "30min"
         alpha_ct=price_raw.RSRV_30[t+1];
