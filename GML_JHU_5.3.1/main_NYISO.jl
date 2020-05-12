@@ -31,7 +31,7 @@ T=288;
 # # of secnarios
 SN=1;
 
-baseMVA = 1;
+
 ################################################################################
 # penetation level
 # Solar_pene=[0]; # 0.25 0.5 0.75 1
@@ -45,9 +45,13 @@ solar_error_max = 0;
 ################################################################################
 # # shunt_struct = shunt_data(data_trace_bus,data_trace_shunt);
 
-bus_struct = bus_data();
-branch_struct =branch_data();
-gen_struct = gen_data();
+system = matread("../data/IEEE/IEEE_39_bus.mat")["mpc"];
+
+baseMVA = system["baseMVA"];
+# println(baseMVA)
+bus_struct = bus_data(system);
+branch_struct =branch_data(system);
+gen_struct = gen_data(system);
 NoBus = length(bus_struct.baseKV)
 # # initial SOC
 # load price data
@@ -74,7 +78,7 @@ elseif solar_error_max == 0
     pg_noise = zeros(1,12);
 end
 
-# case_info = matread("../data/IEEE/IEEE_39_bus.mat");
+
 
 pg_raw = read_NY_solar_data(bus_struct)
 
