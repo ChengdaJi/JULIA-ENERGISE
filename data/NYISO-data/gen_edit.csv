@@ -1,0 +1,2 @@
+id,bus,name,P,Q,status,Vsp,Pmin,Pmax,Qmin,Qmax
+1,70,the_reference_bus_345kV,238.93,-81.7,1,1.03569,0,999,-200,280
