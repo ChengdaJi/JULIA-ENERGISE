@@ -1,0 +1,5 @@
+id,bus,name,kind,P,Q,status,Qmin,Qmax,Vsp,fracS,fracY,bus_reg
+1,1,south_mahwah_345kV_1,LOAD,50,30.99,1,0,0,,1,0,2
+2,2,39_2_13,LOAD,170,105.35,1,0,0,,1,0,2
+3,3,south_mahwah_345kV_2,LOAD,200,123.94,1,0,0,,1,0,3
+4,4,39_1_13,LOAD,80,49.58,1,0,0,,1,0,3

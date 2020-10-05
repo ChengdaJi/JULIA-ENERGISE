@@ -1,0 +1,5 @@
+id,name,kind,baseKV,Vm,Va,locX,locY
+1,west_haverstraw_345kV,RE,230,1,0,,
+2,south_mahwah_345kV_1,PQ,230,1,0,,
+3,south_mahwah_345kV_2,PQ,230,1,0,,
+4,UNIDENTIFIED: MDTN TAP,PV,230,1,0,,
