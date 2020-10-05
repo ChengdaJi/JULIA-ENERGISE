@@ -124,6 +124,16 @@ end
 cd('..') 
 cd('..') 
 
+
+% 3 for  peak shaving
+total_cost_3 = 0;
+p0_3 = zeros(288,1);
+pg_3 = zeros(288,1);
+R_3 = zeros(288,1);
+prsrv_3 = zeros(288,1);
+B_3  = zeros(288,1);
+pcul_3 = zeros(288,1);
+st_3  = zeros(288,1);
 cd('Det_battery_peak') 
 cd('result') 
 for i = 1:288
@@ -149,7 +159,7 @@ for i = 1:288
     temp_R = table2array(T(1,5));
     R_3(i) = temp_R;
 
-    temp_p0 = table2array(T(1,7));
+    temp_p0 = table2array(T(1,7))
     p0_3(i) = temp_p0;
     
     temp_pd = table2array(T(1,6));
@@ -188,9 +198,12 @@ peak_base = max(p0_1)*1000000
 peak_bat = max(p0_2)*1000000
 peak_peak = max(p0_3)*1000000
 
-rt_cost_base = lambda_rt' * p0_1 *100/12
-rt_cost_ba = lambda_rt' * p0_2 *100/12
-rt_cost_peak = lambda_rt' * p0_3' *100/12
+initial_slot = 17*12+1;
+end_slot = 20*12;
+rt_cost_base = lambda_rt(initial_slot:end_slot)' * p0_1(initial_slot:end_slot) *100/12
+rt_cost_ba = lambda_rt(initial_slot:end_slot)' * p0_2(initial_slot:end_slot) *100/12
+rt_cost_peak = lambda_rt(initial_slot:end_slot)' * p0_3(initial_slot:end_slot) *100/12
+
 
 sol_cul_1 = sum(pcul_1)*15*100/12
 sol_cul_2 = sum(pcul_2)*15*100/12
