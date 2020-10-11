@@ -132,14 +132,18 @@ lambda_rt = table2array(T(:,4));
 lambda_rt = lambda_rt(1:288);
 lambda_da = lambda_da(1:288);
 
-peak_without = max(p0_1)*1000000
-peak_with = max(p0_2)*1000000
-
-initial_slot = 17*12+1;
+initial_slot =17*12+1;
 end_slot = 20*12;
-rt_cost_without = lambda_rt(initial_slot:end_slot)' * p0_1(initial_slot:end_slot) *100/12
+
+peak_no = max(p0_1(initial_slot:end_slot))*1000000
+peak_with = max(p0_2(initial_slot:end_slot))*1000000
+% peak_peak = max(p0_3(initial_slot:end_slot))*1000000
+
+
+rt_cost_no = lambda_rt(initial_slot:end_slot)' * p0_1(initial_slot:end_slot) *100/12
 rt_cost_with = lambda_rt(initial_slot:end_slot)' * p0_2(initial_slot:end_slot) *100/12
+% rt_cost_peak = lambda_rt(initial_slot:end_slot)' * p0_3(initial_slot:end_slot) *100/12
 
-sol_cul_1 = sum(pcul_1)*15*100/12
-sol_cul_2 = sum(pcul_2)*15*100/12
 
+sol_cul_1 = sum(pcul_1(initial_slot:end_slot))*15*100/12
+sol_cul_2 = sum(pcul_2(initial_slot:end_slot))*15*100/12

@@ -16,16 +16,16 @@ hold on
 % ylabel('[$\$/$MWHr]','Interpreter','latex','FontSize',20,'Color','black');
 % ylim([0,50])
 
-
+plot(times,(pd)*100,'k','linestyle','-.','linewidth',3);
 plot(times,(p0_1)*100,'r','linestyle','-','linewidth',3);
 plot(times,(p0_2)*100,'b','linestyle','-','linewidth',3);
-plot(times,(pd)*100,'k','linestyle','-.','linewidth',3);
 
 
-set(gca,'Ycolor','black','FontSize',20)
-legend('$P_{0}$ no shaving','$P_{0}$ with shaving','$P_{d}$','LMP','Interpreter','latex')
 
-ylabel('$P$\,\,[MW]','Interpreter','latex','FontSize',20,'Color','black');
+set(gca,'Ycolor','black','FontSize',25)
+legend('Baseline','Real-time balancing','Real-time balancing with peak-shaving','LMP','Interpreter','latex')
+
+ylabel('$P_0$\,\,[MW]','Interpreter','latex','FontSize',25,'Color','black');
 set(gca,'xtick',[1,36,72,108,144,180,216,252,288], 'xticklabel',{'12AM','3AM','6AM','9AM','12PM','3PM','6PM','9PM','12AM'});
 xlim([1,288]);
 % ylim([-20,40]);
@@ -39,19 +39,19 @@ figure('Name',"R")
 hold on
 yyaxis right
 l = plot(times,lambda_rt,'k','linestyle','--','linewidth',3);
-set(gca,'Ycolor','black','FontSize',20)
-ylabel('[$\$/$MWHr]','Interpreter','latex','FontSize',20,'Color','black');
+set(gca,'Ycolor','black','FontSize',25)
+ylabel('[$\$/$MWHr]','Interpreter','latex','FontSize',25,'Color','black');
 ylim([0,50])
 
 yyaxis left
 plot(times,(R_1)*100,'r','linestyle','-','linewidth',3);
 plot(times,(R_2)*100,'b','linestyle','-','linewidth',3);
-ylim([-500,500])
+ylim([-380,380])
 
-set(gca,'Ycolor','black','FontSize',20)
-legend('$R$ no shaving','$R$ with shaving','LMP','Interpreter','latex')
+set(gca,'Ycolor','black','FontSize',25)
+legend('Real-time balancing','Real-time balancing with peak-shaving','LMP','Interpreter','latex')
 
-ylabel('$R$\,\,[MW]','Interpreter','latex','FontSize',20,'Color','black');
+ylabel('R\,\,[MW]','Interpreter','latex','FontSize',25,'Color','black');
 set(gca,'xtick',[1,36,72,108,144,180,216,252,288], 'xticklabel',{'12AM','3AM','6AM','9AM','12PM','3PM','6PM','9PM','12AM'});
 xlim([1,288]);
 % ylim([-20,40]);

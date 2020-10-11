@@ -47,8 +47,8 @@ B_inp = [0.228; 0.146; 0.404];
 current_time=1;
 # for current_time=73:74
 ###################
-	if current_time == 1
-		B_inp = [0.228; 0.146; 0.404];
+	if current_time == 2
+		B_inp = [3.0; 10.2; 12.0; 4.8]/2;
 	else
 		B_inp = [0; 0; 0];
 	end

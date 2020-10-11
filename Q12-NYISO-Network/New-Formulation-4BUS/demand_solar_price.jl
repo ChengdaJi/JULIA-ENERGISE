@@ -95,31 +95,30 @@ function pd_traj(date, t, pd_raw, pd_noise, T, NoShunt, Pred_length, baseMVA)
     raw_pu_qd_da = zeros(NoShunt, 288);
 
     for shunt=1:NoShunt
-        # println(multiplier.feeder_mult[bus])
-        if shunt == 2
-            raw_pu_traj[shunt, :]=feeder_real.feeder_pd[2, t+1:t+T]/baseMVA;
-            raw_pu_qd_traj[shunt, :]=feeder_reactive.feeder_qd[2, t+1:t+T]/baseMVA;
-
-            raw_pu_da[shunt, :]=feeder_real.feeder_pd_da[2, t+1:t+T]/baseMVA;
-            raw_pu_qd_da[shunt, :]=feeder_reactive.feeder_qd_da[2,t+1:t+T]/baseMVA;
-        elseif shunt == 4
-            raw_pu_traj[shunt, :]=feeder_real.feeder_pd[1, t+1:t+T]/baseMVA;
-            raw_pu_qd_traj[shunt, :]=feeder_reactive.feeder_qd[1, t+1:t+T]/baseMVA;
-
-            raw_pu_da[shunt, :]=feeder_real.feeder_pd_da[1, t+1:t+T]/baseMVA;
-            raw_pu_qd_da[shunt, :]=feeder_reactive.feeder_qd_da[1,t+1:t+T]/baseMVA;
-        elseif shunt == 5
-            raw_pu_traj[shunt, :]=feeder_real.feeder_pd[3, t+1:t+T]/baseMVA;
-            raw_pu_qd_traj[shunt, :]=feeder_reactive.feeder_qd[3, t+1:t+T]/baseMVA;
-
-            raw_pu_da[shunt, :]=feeder_real.feeder_pd_da[3, t+1:t+T]/baseMVA;
-            raw_pu_qd_da[shunt, :]=feeder_reactive.feeder_qd_da[3,t+1:t+T]/baseMVA;
-        else
+        # if shunt == 2
+        #     raw_pu_traj[shunt, :]=feeder_real.feeder_pd[2, t+1:t+T]/baseMVA;
+        #     raw_pu_qd_traj[shunt, :]=feeder_reactive.feeder_qd[2, t+1:t+T]/baseMVA;
+        #
+        #     raw_pu_da[shunt, :]=feeder_real.feeder_pd_da[2, t+1:t+T]/baseMVA;
+        #     raw_pu_qd_da[shunt, :]=feeder_reactive.feeder_qd_da[2,t+1:t+T]/baseMVA;
+        # elseif shunt == 4
+        #     raw_pu_traj[shunt, :]=feeder_real.feeder_pd[1, t+1:t+T]/baseMVA;
+        #     raw_pu_qd_traj[shunt, :]=feeder_reactive.feeder_qd[1, t+1:t+T]/baseMVA;
+        #
+        #     raw_pu_da[shunt, :]=feeder_real.feeder_pd_da[1, t+1:t+T]/baseMVA;
+        #     raw_pu_qd_da[shunt, :]=feeder_reactive.feeder_qd_da[1,t+1:t+T]/baseMVA;
+        # elseif shunt == 5
+        #     raw_pu_traj[shunt, :]=feeder_real.feeder_pd[3, t+1:t+T]/baseMVA;
+        #     raw_pu_qd_traj[shunt, :]=feeder_reactive.feeder_qd[3, t+1:t+T]/baseMVA;
+        #
+        #     raw_pu_da[shunt, :]=feeder_real.feeder_pd_da[3, t+1:t+T]/baseMVA;
+        #     raw_pu_qd_da[shunt, :]=feeder_reactive.feeder_qd_da[3,t+1:t+T]/baseMVA;
+        # else
             raw_pu_traj[shunt, :]=pd_raw.pd_rt[shunt, t+1:t+T]/baseMVA;
             raw_pu_qd_traj[shunt, :]=pd_raw.qd_rt[shunt, t+1:t+T]/baseMVA;
             raw_pu_da[shunt, :]=pd_raw.pd_da[shunt,t+1:t+T]/baseMVA;
             raw_pu_qd_da[shunt, :]=pd_raw.qd_da[shunt,t+1:t+T]/baseMVA;
-        end
+        # end
 
     end
 
@@ -223,20 +222,21 @@ function pg_traj(date, t, pg_raw, pg_noise, solar_error_max, p_rate, T, Pred_len
     NoShunt, baseMVA);
     feeder_solar = ORU_feeder_Pg(date);
     sg_max = maximum(p_rate*pg_raw.pg_rt, dims=2)/baseMVA;
+    println(string("solar capacity", sg_max[:,1]))
 
-    sg_max[2] = 5.4/baseMVA;
-    sg_max[4] = 34.655/baseMVA;
-    sg_max[5] = 13.225/baseMVA;
+    # sg_max[2] = 5.4/baseMVA;
+    # sg_max[4] = 34.655/baseMVA;
+    # sg_max[5] = 13.225/baseMVA;
 
     rt_raw = p_rate*pg_raw.pg_rt/baseMVA;
-    rt_raw[2,:] = feeder_solar.feeder_pg[2,:]/baseMVA;
-    rt_raw[4,:] = feeder_solar.feeder_pg[1,:]/baseMVA;
-    rt_raw[5,:] = feeder_solar.feeder_pg[3,:]/baseMVA;
+    # rt_raw[2,:] = feeder_solar.feeder_pg[2,:]/baseMVA;
+    # rt_raw[4,:] = feeder_solar.feeder_pg[1,:]/baseMVA;
+    # rt_raw[5,:] = feeder_solar.feeder_pg[3,:]/baseMVA;
 
     da_raw = p_rate*pg_raw.pg_da/baseMVA;
-    da_raw[2,:] = feeder_solar.feeder_pg_da[2,:]/baseMVA;
-    da_raw[4,:] = feeder_solar.feeder_pg_da[1,:]/baseMVA;
-    da_raw[5,:] = feeder_solar.feeder_pg_da[3,:]/baseMVA;
+    # da_raw[2,:] = feeder_solar.feeder_pg_da[2,:]/baseMVA;
+    # da_raw[4,:] = feeder_solar.feeder_pg_da[1,:]/baseMVA;
+    # da_raw[5,:] = feeder_solar.feeder_pg_da[3,:]/baseMVA;
 
     # sg_max[2] = 5.4;
     # sg_max[4] = 34.655;
@@ -296,6 +296,7 @@ function pg_traj_pu_det(date, t, pg_raw, p_rate, T, NoShunt, baseMVA);
     #########
     feeder_solar = ORU_feeder_Pg(date);
     sg_max = maximum(p_rate*pg_raw.pg_rt, dims=2)/baseMVA;
+    println(string("solar capacity", sg_max[:,1]))
 
     # sg_max[2] = 5.4/baseMVA;
     # sg_max[4] = 34.655/baseMVA;
@@ -332,7 +333,7 @@ function pg_traj_pu_det(date, t, pg_raw, p_rate, T, NoShunt, baseMVA);
         da[shunt, :] = da_raw[shunt,t+1:t+T];
     end
 
-    mu_ct = mu[:,t+1];
+    mu_ct = mu[:,1];
     sigma = zeros(NoShunt,T)
     # println(sum(sg_max))
     # println(sum(mu))

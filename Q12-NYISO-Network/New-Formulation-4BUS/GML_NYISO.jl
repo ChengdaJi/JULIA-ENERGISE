@@ -9,7 +9,7 @@ function GML_solver(date, current_time, B_inp, raw_data)
     # # of secnarios
     SN=1;
     # solar peneration rate
-    p_rate = 0.25;
+    p_rate = 0;
     ct_printout = string("===== Solar penetration rate", p_rate);
     println("=================================================")
     println(ct_printout)
@@ -56,8 +56,8 @@ function GML_solver(date, current_time, B_inp, raw_data)
         # B_feedback[4,1] = B_inp[1,1];
         # B_feedback[5,1] = B_inp[3,1];
     else
-        B_feedback = read_B_out(current_time-1)
-        # B_feedback=zeros(NoShunt, 1);
+        # B_feedback = read_B_out(current_time-1)
+        B_feedback=zeros(NoShunt, 1);
 
         # B_feedback[2,1] = B_inp[2,1];
         # B_feedback[4,1] = B_inp[1,1];
@@ -126,7 +126,6 @@ function GML_solver(date, current_time, B_inp, raw_data)
     #
     NoShunt = length(shunt_struct.P)
     NoBus = length(bus_struct.baseKV)
-
     Pd_bus = zeros(NoBus,1)
     Qd_bus = zeros(NoBus,1)
     for bus=1:NoBus
@@ -140,9 +139,16 @@ function GML_solver(date, current_time, B_inp, raw_data)
                 for shunt in bus_shunt_list);
         end
     end
-    reference_points = reference_point(Pd_bus, Qd_bus);
+    println(sum(Pd_bus))
+    println(Pd_bus)
+    println(Qd_bus)
+    reference_points = reference_point(sum(Pd_bus), Pd_bus, Qd_bus);
+    println(string("Pg star", reference_points.P_gen))
+    println(string("Qg star", reference_points.Q_gen))
+    println(string("v star", reference_points.v_magnitude))
+    println(string("Pg star", reference_points.v_polar))
     # return reference_points
-    #
+    # #
     #
     #
     obj = GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, shunt_struct,
@@ -154,34 +160,59 @@ function GML_solver(date, current_time, B_inp, raw_data)
         feedback, pd, pg, price, shunt_struct, bus_struct, branch_struct, gen_struct,
         reference_points);
 
-    B_feedback_out=zeros(NoShunt,1)
-    for shunt = 1:NoShunt
-        B_feedback_out[shunt, 1] = val_opt.B[shunt,1] -
-            floor(val_opt.R[shunt,1]/12*baseMVA*1000)/1000;
-    end
-    write_B_out(current_time, B_feedback_out)
-        # println(val_opt.P_rsrv)
-    if ancillary_type == "10min" || ancillary_type == "30min"
-        if val_opt.P_rsrv <= 0.001
-            P_rsrv_feed = 0.0;
-        else
-            P_rsrv_feed = floor(val_opt.P_rsrv*1000)/1000
+        B_feedback_out=zeros(NoShunt,1)
+        for shunt = 1:NoShunt
+            B_feedback_out[shunt, 1] = val_opt.B[shunt,1] -
+                floor(val_opt.R[shunt,1]/12*baseMVA*1000)/1000;
         end
+        write_B_out(current_time, B_feedback_out)
+           # println(val_opt.P_rsrv)
+        if ancillary_type == "10min" || ancillary_type == "30min"
+            if val_opt.P_rsrv <= 0.001
+                P_rsrv_feed = 0.0;
+            else
+                P_rsrv_feed = floor(val_opt.P_rsrv*1000)/1000
+            end
 
-        if current_time == 1
-            P_rsrv_feedback_temp = [P_rsrv_feed]
-        else
-            # println(size(P_rsrv_feedback))
-            P_rsrv_feedback_temp = hcat(P_rsrv_feedback, P_rsrv_feed)
-            # push!(P_rsrv_feedback,val_opt.P_rsrv)
-        end
-        write_RSRV_out(P_rsrv_feedback_temp)
-    end
-    mkpath("./result")
-    write_output_out(val_opt, 0, Pd_bus,
-        string("./result/Time", current_time, ".csv"));
-    write_v_bus_out(current_time, val_opt);
-    return val_opt
+            if current_time == 1
+                P_rsrv_feedback_temp = [P_rsrv_feed]
+            else
+                # println(size(P_rsrv_feedback))
+                P_rsrv_feedback_temp = hcat(P_rsrv_feedback, P_rsrv_feed)
+                # push!(P_rsrv_feedback,val_opt.P_rsrv)
+            end
+            write_RSRV_out(P_rsrv_feedback_temp)
+       end
+
+
+       Pd_bus_real = zeros(NoBus,1)
+       Qd_bus_real = zeros(NoBus,1)
+
+       for bus=1:NoBus
+           bus_shunt_list = findall(id->id==bus, shunt_struct.find_bus[:,1]);
+           if ~isempty(bus_shunt_list)
+
+               Pd_bus_real[bus,1] = sum(
+                   pd.ct[Int(shunt),1]-pg.mu_ct[Int(shunt),1]
+                   -val_opt.R[Int(shunt),1]
+                   for shunt in bus_shunt_list);
+
+               Qd_bus_real[bus,1] = sum(pd.qd_ct[Int(shunt),1]-val_opt.Qg[Int(shunt),1]
+                   for shunt in bus_shunt_list);
+           end
+       end
+
+       val_rp = reference_point(sum(Pd_bus), Pd_bus_real, Qd_bus_real);
+
+       # filename = string("midnight_Q=",p_rate,".csv")
+       # write_4bus_out(val_opt.P_gen, val_opt.Q_gen,
+       #     val_opt.v, val_opt.theta, val_rp, filename)
+       #
+       # mkpath("./result")
+       # write_output_out_2(val_opt, 0, val_rp, price, Pd_bus_real,
+       #     string("./result/Time", current_time, ".csv"));
+       # write_v_bus_out(current_time, val_opt);
+       return val_opt
 end
 
 
@@ -216,13 +247,12 @@ function GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, shunt_struct,
     # println(sum(B_max[:,1]))
     # println(sum(B_max)/288)
     B_min = zeros(NoShunt, T);
-    R_rate = 1/3;
+    R_rate =5;
     R_max = R_rate*B_max/baseMVA;
     # R_max[2,:] = 1.450/baseMVA*ones(1, T);
     # R_max[4,:] = 2.265/baseMVA*ones(1, T);
     # R_max[5,:] = 3.667/baseMVA*ones(1, T);
     R_min = -R_max;
-    # println(sum(R_max[:,1]))
     # println(R_max[:,1])
     # println(R_min[:,1])
     W = zeros(NoBus, T);
@@ -238,8 +268,8 @@ function GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, shunt_struct,
     P_rsrv_min=zeros(1,T);
     k=12;
     #
-    V_min = 0.0;
-    V_max = 10;
+    V_min = 0.9;
+    V_max = 1.1;
     r=branch_struct.r
     # println(r)
     x=branch_struct.x
@@ -267,8 +297,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     reference_points);
     # Q_gamma=0.01;
     Q_bar=0.01;
-    P_Percent = [0.181935169, 0.002855468, 0.001789426, 0.004736269, 0.030496394,
-        0.002840238, 0.000639625, 0.386858757, 0.387848653];
+    P_Percent = [0.636, 1-0.636];
     # Q_Percent = [0.475276323, 0.034904014, -0.017452007, -0.029086678,
     #     -0.034904014, -0.031297266, -0.053868528, 0.357998837, 0.298429319];
     println("===== GML - Optimization ")
@@ -305,7 +334,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     Pd = pd.traj;
     Qd = pd.qd_traj;
 
-    Pd_agg = sum(Pd, dims=1);
+    Pd_agg = sum(Pd-pg.mu, dims=1);
     Qd_agg = sum(Qd, dims=1);
 
     B_feedback = feedback.B_feedback;
@@ -335,87 +364,53 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     @variable(m,  B_max[shunt,1] >= B_rt[shunt = 1:NoShunt, 1] >= 0)
     @variable(m, R_max[shunt,1]>= R_rt[shunt = 1:NoShunt, 1] >= -R_max[shunt, 1])
 
-    @variable(m, -Pd[shunt,1]<= P_shunt_rt[shunt = 1:NoShunt, 1]
-        <= -Pd[shunt,1]+pg.mu[shunt,1])
+    @variable(m, -Pd[shunt,1]-R_max[shunt,1]<= P_shunt_rt[shunt = 1:NoShunt, 1]
+        <= -Pd[shunt,1]+pg.mu[shunt,1]+R_max[shunt,1])
 
     @variable(m, 1000>= Q_shunt_rt[1:NoShunt, 1] >=-1000)
 
     # bus level
     @variable(m, 1000 >= P_bus_rt[1:NoBus, 1]  >= -1000)
     @variable(m, 1000 >= Q_bus_rt[1:NoBus, 1] >= -1000)
-    @variable(m, pi/2 >= theta[1:NoBus, 1] >= -pi/2)
+    @variable(m, pi/2 >= theta_rt[1:NoBus, 1] >= -pi/2)
 
-    @variable(m, v_rt[1:NoBus, 1]>=0)
-
-    # Branch level
-    # @variable(m, 1000 >= P_br_rt[1:NoBr, 1] >= -1000)
-    # @variable(m, 1000 >= Q_br_rt[1:NoBr, 1] >= -1000)
-    # @variable(m, l_rt[1:NoBr, 1])
+    @variable(m, V_max>=v_rt[1:NoBus, 1]>=V_min)
 
     # gen level
     @variable(m, 1000 >= P_gen_rt[1:NoGen, 1]  >= -1000)
     @variable(m, 1000 >= Q_gen_rt[1:NoGen, 1]  >= -1000)
 
-    # P_shunt_star = zeros(NoShunt,1)
-    # Q_shunt_star = zeros(NoShunt,1)
-
-
-    # println(" ---- Real Time Constraint Buildup ")
+    # shut level
     for shunt=1:NoShunt
-        # box constraints on Solar (Pg), Battery discharge (R)
-        # @constraint(m, 0<=Pg_rt[shunt,1]);
-        # @constraint(m, R_min[shunt,1]<= R_rt[shunt,1]);
-        # @constraint(m, R_rt[shunt,1]<= R_max[shunt,1]);
+
         # Initial battery SOC
         if B_feedback[shunt,1]>= B_max[shunt,1]
             B_feedback[shunt,1]= B_max[shunt,1];
-        elseif B_feedback[shunt,1]<= B_min[shunt,1]
+        elseif B_feedback[shunt,1]<= 0
             B_feedback[shunt,1]= B_min[shunt,1];
         end
+        # println(string("current battery",B_feedback[shunt,1]))
         @constraint(m, B_rt[shunt,1]==B_feedback[shunt,1]);
 
-        if shunt_struct.type[shunt, 1]==1
+        if shunt_struct.type[shunt, 1]==1 # load shunt
             # solar
-            # @constraint(m, Pg_rt[shunt,1]<=
-            #     positive_scalar(icdf*sqrt(pd.sigma[shunt,1]+pg.sigma[shunt,1])
-            #     +pg.mu[shunt,1]));
-            # @constraint(m, Qg_rt[shunt,1]<=pg.sg_max[shunt, 1])
-            # @constraint(m, Qg_rt[shunt,1]>=-pg.sg_max[shunt, 1])
             @constraint(m, [pg.sg_max[shunt, 1], Pg_rt[shunt,1], Qg_rt[shunt,1]]
                 in SecondOrderCone());
 
-            # SOC constrains on real and reactive power on bus
-            # maxS_rt = sqrt(1+Q_gamma^2)*(Pd[shunt,1]+R_max[shunt,1]-
-            # positive_scalar(
-            # icdf*sqrt(pd.sigma[shunt,1]+pg.sigma[shunt,1])));
-            # if maxS_rt>=0
-            #     @constraint(m,
-            #     [maxS_rt,
-            #     P_shunt_rt[shunt,1], Q_shunt_rt[shunt,1]] in SecondOrderCone())
-            # else
-            #     @constraint(m,
-            #     [-maxS_rt,
-            #     P_shunt_rt[shunt,1], Q_shunt_rt[shunt,1]] in SecondOrderCone())
-            # end
-
-            # real power on bus is demand minus solar and discharge
-            # AKA power injection
-
+            # R_rt > 0 indicates injection a.k.a. discharge
             @constraint(m, P_shunt_rt[shunt,1]==
-                -Pd[shunt,1]
-                +(Pg_rt[shunt,1]+R_rt[shunt,1]));
+                -Pd[shunt,1]+R_rt[shunt,1]+Pg_rt[shunt,1]
+                );
             @constraint(m, Q_shunt_rt[shunt,1]==
                 -Qd[shunt,1]+Qg_rt[shunt,1]);
-            # @constraint(m, Q_shunt_rt[shunt,1]==
-            #     -Qd[shunt,1]);
-            # @constraint(m, Q_shunt_rt[shunt,1]==
-            #     Qd[shunt,1]);
-        elseif shunt_struct.type[shunt, 1]==2
+
+        elseif shunt_struct.type[shunt, 1]==2 # ctrl_v shunt
+
+            # no solar avaliable in control v shunt
             @constraint(m, Pg_rt[shunt,1]==0)
             @constraint(m, Qg_rt[shunt,1]==0)
             @constraint(m, P_shunt_rt[shunt,1]==0);
-            # println(Pd[shunt,1])
-            # println(Qd[shunt,1])
+
             if Qd[shunt,1] >= Q_bar;
                 @constraint(m, Q_shunt_rt[shunt,1]<=0);
                 @constraint(m, Q_shunt_rt[shunt,1]>=-Qf_max[shunt,1]);
@@ -428,6 +423,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
 
     P_bus_star = zeros(NoBus,1)
     Q_bus_star = zeros(NoBus,1)
+
     G_con = reference_points.G_con;
     B_sus = reference_points.B_sus;
     theta_star = reference_points.v_polar;
@@ -437,51 +433,11 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     for bus=1:NoBus
         # id of shunts that belong to that bus
         bus_shunt_list = findall(id->id==bus, shunt_struct.find_bus[:,1]);
-        # a list of branchs that FROM the bus of interest
-        # a list of branchs that POINT TO the bus of interest
-        add_branch_list = findall(minusone-> minusone==-1, C_ind[bus,:]) #In
-        sub_branch_list = findall(one->one==1, C_ind[bus,:]) # Out
 
-        other_bus_list = findall(bus_other-> bus_other !=0 && bus_other!=bus,
-            reference_points.ad_matrix.matrix[bus,:])
-        # println(bus)
-        # println(other_bus_list)
+        # PQ bus
+        if bus_struct.type[bus]==1
 
-
-        # if isempty(bus_shunt_list)
-        #     @constraint(m, P_bus_rt[bus,1] == 0)
-        #     @constraint(m, Q_bus_rt[bus,1] == 0)
-        # elseif ~isempty(bus_shunt_list)
-        #     @constraint(m, P_bus_rt[bus,1] ==
-        #         sum(P_shunt_rt[Int(shunt),1] for shunt in bus_shunt_list))
-        #     @constraint(m, Q_bus_rt[bus,1] ==
-        #         sum(Q_shunt_rt[Int(shunt),1] for shunt in bus_shunt_list))
-        # end
-
-        ########### voltage
-        # if bus == 70
-        #     @constraint(m,
-        #         1.03569^2 == v_rt[bus,1]);
-        # else
-        #     @constraint(m, V_min^2<= v_rt[bus,1]);
-        #     @constraint(m, v_rt[bus,1]<= V_max^2);
-        # end
-        if bus_switch_shunt[bus] == 0
-            @constraint(m, V_min<= v_rt[bus,1]);
-            @constraint(m, v_rt[bus,1]<= V_max);
-        else
-            switch_shunt_id = Int(bus_switch_shunt[bus])
-            # @constraint(m,
-            #     shunt_struct.Vsp[switch_shunt_id] == v_rt[bus,1]);
-            @constraint(m, v_star[bus,1]== v_rt[bus,1]);
-            # println("ORU voltage")
-            # println(shunt_struct.Vsp[switch_shunt_id])
-            # println("star voltage")
-            # println(v_star[bus,1])
-        end
-        # @constraint(m, v_star[bus,1]== v_rt[bus,1]);
-        # @constraint(m, theta_star[bus,1]== theta[bus,1]);
-        if bus_struct.type[bus]==1 # non-generator bus
+            # injection on bus
             if isempty(bus_shunt_list)
                 @constraint(m, P_bus_rt[bus,1] == 0)
                 @constraint(m, Q_bus_rt[bus,1] == 0)
@@ -491,55 +447,51 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                 @constraint(m, Q_bus_rt[bus,1] ==
                     sum(Q_shunt_rt[Int(shunt),1] for shunt in bus_shunt_list))
             end
+
+            # reference injection on bus
             P_bus_star[bus,1] = -reference_points.Pd_bus[bus,1];
             Q_bus_star[bus,1] = -reference_points.Qd_bus[bus,1];
-            # @constraint(m, P_bus_rt[bus,1] == P_bus_star[bus,1])
-            # @constraint(m, Q_bus_rt[bus,1] == Q_bus_star[bus,1])
-        else
+
+        else # PV bus or Slack bus
+
             # identify the id of the generator that connects to the bus of interest
             gen_id = findall(bus_id ->bus_id == bus, gen_struct.bus[:,1]);
+            # println(string("swith shunt ", bus, "Generator ", gen_id[1]))
 
-            # println(gen_id)
             P_bus_star[bus,1] = -reference_points.Pd_bus[bus,1]+
                 reference_points.P_gen[gen_id[1],1];
             Q_bus_star[bus,1] = -reference_points.Qd_bus[bus,1]+
                 reference_points.Q_gen[gen_id[1],1];
 
+
+            if bus_struct.type[bus]==3 # slack bus constraint
+                @constraint(m, theta_rt[bus, 1] == theta_star[bus, 1])
+                @constraint(m, v_star[bus,1]== v_rt[bus,1]);
+
+            elseif bus_struct.type[bus]==2 # PV bus constraint
+                @constraint(m, v_star[bus,1]== v_rt[bus,1]);
+                @constraint(m,
+                    P_gen_rt[gen_id[1], 1]==Pd_agg[1,1]*P_Percent[gen_id[1]])
+                # @constraint(m,
+                #     Q_gen_rt[gen_id[1], 1]<=gen_struct.Qmax[gen_id[1]]/baseMVA)
+                # @constraint(m,
+                #     Q_gen_rt[gen_id[1], 1]>=gen_struct.Qmin[gen_id[1]]/baseMVA)
+            end
+
+
+
             if isempty(bus_shunt_list)
-                # println(gen_id)
-                # println("here")
                 @constraint(m, P_bus_rt[bus,1] == P_gen_rt[gen_id[1], 1])
                 @constraint(m, Q_bus_rt[bus,1] == Q_gen_rt[gen_id[1], 1])
-                # @constraint(m, P_bus_rt[bus,1] == P_bus_star[bus,1])
-                # @constraint(m, Q_bus_rt[bus,1] == Q_bus_star[bus,1])
             elseif ~isempty(bus_shunt_list)
-                # println(gen_id)
-                # println("with shunt")
                 @constraint(m, P_bus_rt[bus,1] ==
                     sum(P_shunt_rt[Int(shunt),1] for shunt in bus_shunt_list)
                     +P_gen_rt[gen_id[1], 1])
                 @constraint(m, Q_bus_rt[bus,1] ==
                     sum(Q_shunt_rt[Int(shunt),1] for shunt in bus_shunt_list)
                     +Q_gen_rt[gen_id[1], 1])
-                # @constraint(m, P_bus_rt[bus,1] == P_bus_star[bus,1])
-                # println("======")
-                # println("at bus")
-                # println(bus)
-                # println("star qd")
-                # println(-reference_points.Qd_bus[bus,1])
-                # println("real qd")
-                # println(-sum(Pd[Int(shunt),1] for shunt in bus_shunt_list))
-                # println("star qgen")
-                # println(reference_points.Q_gen[gen_id[1],1])
-                # println("Qmax")
-                # println(gen_struct.Qmax[gen_id[1]]/baseMVA)
-                # println("star bus")
-                # println(Q_bus_star[bus,1])
-                # @constraint(m, Q_bus_rt[bus,1] == Q_bus_star[bus,1])
             end
 
-            # @constraint(m, P_bus_rt[bus,1] == P_bus_star[bus,1])
-            # @constraint(m, Q_bus_rt[bus,1] == Q_bus_star[bus,1])
         end
         # println(P_bus_star[71,1])
         @constraint(m, -P_bus_rt[bus,1] + P_bus_star[bus,1]
@@ -553,11 +505,11 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
         +v_star[bus_other,1]*v_star[bus,1]*
         (-G_con[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1])+
         B_sus[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1]))
-        *(theta[bus, 1]-theta_star[bus,1])
+        *(theta_rt[bus, 1]-theta_star[bus,1])
         +v_star[bus_other,1]*v_star[bus,1]*
         (G_con[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1])
         -B_sus[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1]))
-        *(theta[bus_other, 1]-theta_star[bus_other,1])
+        *(theta_rt[bus_other, 1]-theta_star[bus_other,1])
         for bus_other in 1:NoBus) == 0
         );
 
@@ -572,323 +524,219 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
         +v_star[bus_other,1]*v_star[bus,1]*
         (G_con[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1])
         +B_sus[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1]))
-        *(theta[bus, 1]-theta_star[bus, 1])
+        *(theta_rt[bus, 1]-theta_star[bus, 1])
         +v_star[bus_other,1]*v_star[bus,1]*
         (-G_con[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1])
         -B_sus[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1]))
-        *(theta[bus_other, 1]-theta_star[bus_other, 1])
+        *(theta_rt[bus_other, 1]-theta_star[bus_other, 1])
         for bus_other in 1:NoBus) == 0
         );
-        if bus == 70
-            # println("slack bus theta")
-            # println(theta_star[bus, 1])
-            @constraint(m, theta[bus, 1] == theta_star[bus, 1])
-        end
-        # for bus_other in 1:NoBus
-        #     if theta_star[bus, bus_other] == 0
-        #         @constraint(m, theta[bus, bus_other]-theta_star[bus, bus_other]==0)
-        #     end
-        # end
+
 
     end
 
-
-    # voltage constraint for LinDistFlow
-
-
-    # for branch =1:NoBr
-    #     fbus = branch_struct.fbus[branch];
-    #     tbus = branch_struct.tbus[branch];
-    #     # @constraint(m,
-    #     #     P_bus_rt(fbus)-
-    #
-    #
-    # end
-
-    # # box constraint on generator
-    # # NoGen
-    for Gen=2:NoGen
-        # @constraint(m,
-        #     P_gen_rt[Gen,1]<=gen_struct.Pmax[Gen]/baseMVA)
-        # @constraint(m,
-        #     P_gen_rt[Gen,1]>=gen_struct.Pmin[Gen]/baseMVA)
-        @constraint(m,
-            P_gen_rt[Gen,1]==Pd_agg[1,1]*P_Percent[Gen])
-        # @constraint(m,
-        #     Q_gen_rt[Gen,1]==Qd_agg[1,1]*Q_Percent[Gen])
-        # @constraint(m,
-        #     Q_gen_rt[Gen,1]<=10*gen_struct.Qmax[Gen]/baseMVA)
-        # @constraint(m,
-        #     Q_gen_rt[Gen,1]>=2*gen_struct.Qmin[Gen]/baseMVA)
-    end
-    # @constraint(m,
-    #     P_gen_rt[1,1]<=gen_struct.Pmax[1]/baseMVA)
-    # @constraint(m,
-    #     P_gen_rt[1,1]>=gen_struct.Pmin[1]/baseMVA)
-    # @constraint(m,
-    #     Q_gen_rt[1,1]<=gen_struct.Qmax[1]/baseMVA)
-    # @constraint(m,
-    #     Q_gen_rt[1,1]>=gen_struct.Qmin[1]/baseMVA)
-    # peak shaving
     @constraint(m,
         peak_withdraw[1,1]==0);
 
 
     # #
-    # # shunt
-    # @variable(m, pg.mu[shunt, t+1]>=
-    #     Pg[1:SN, shunt = 1:NoShunt, t=1:T-1]>= 0); # the real power output
-    # @variable(m, pg.sg_max[shunt, 1]>= Qg[1:SN, shunt = 1:NoShunt, 1:T-1]
-    #     >= -pg.sg_max[shunt, 1]); # the real power output
+    # shunt
+    @variable(m, pg.mu[shunt, t+1]>=
+        Pg[1:SN, shunt = 1:NoShunt, t=1:T-1]>= 0); # the real power output
+    @variable(m, pg.sg_max[shunt, 1]>= Qg[1:SN, shunt = 1:NoShunt, 1:T-1]
+        >= -pg.sg_max[shunt, 1]); # the real power output
 
-    # @variable(m, 100 >=B[1:SN, shunt=1:NoShunt, t=1:T-1] >= 0); # the storage
-    # @variable(m, R_max[shunt, t+1]>=
-    #     R[1:SN, shunt=1:NoShunt, t=1:T-1] >= R_min[shunt, t+1]);# the charge/discharge rate
+    @variable(m, B_max[shunt, t+1] >=B[1:SN, shunt=1:NoShunt, t=1:T-1] >= 0); # the storage
+    @variable(m, R_max[shunt, t+1]>=
+        R[1:SN, shunt=1:NoShunt, t=1:T-1] >= R_min[shunt, t+1]);# the charge/discharge rate
 
-    # @variable(m, Pd[shunt,t+1]+R_max[shunt, t+1] >=
-    #     P_shunt[1:SN, shunt=1:NoShunt, t=1:T-1] >=
-    #     Pd[shunt,t+1]-pg.mu[shunt, t+1]-R_max[shunt, t+1])
-    # @variable(m, 1000>=Q_shunt[1:SN, 1:NoShunt, 1:T-1]>=-1000)
+    @variable(m, -Pd[shunt,t+1]-R_max[shunt, t+1] <=
+        P_shunt[1:SN, shunt=1:NoShunt, t=1:T-1] <=
+        -Pd[shunt,t+1]+pg.mu[shunt, t+1]+R_max[shunt, t+1])
 
+    # @variable(m, -Qd[shunt,t+1]-pg.sg_max[shunt, 1]-Qf_max[shunt,1]
+    #     <=Q_shunt[1:SN, shunt = 1:NoShunt, 1:T-1]<=
+    #     -Qd[shunt,t+1]+pg.sg_max[shunt, 1]+Qf_max[shunt,1])
 
-    # @variable(m, 1000>=P_bus[1:SN, 1:NoBus, 1:T-1]>=-1000)
-    # @variable(m, 1000>=Q_bus[1:SN, 1:NoBus, 1:T-1]>=-1000)
-    # @variable(m, v[1:SN, 1:NoBus, 1:T-1])
-
-    # # Branch level
-    # @variable(m, 1000>=P_br[1:SN,1:NoBr, 1:T-1]>=-1000)
-    # @variable(m, 1000>=Q_br[1:SN,1:NoBr, 1:T-1]>=-1000)
-    # @variable(m, l[1:SN,1:NoBr, 1:T-1])
-    # # Gen Level
-    # @variable(m, 1000>=P_gen[1:SN, 1:NoGen, 1:T-1]>=-1000)
-    # @variable(m, 1000>=Q_gen[1:SN, 1:NoGen, 1:T-1]>=-1000)
-
-    @variable(m, Pg[1:SN, shunt = 1:NoShunt, t=1:T-1] == 0); # the real power output
-    @variable(m, Qg[1:SN, shunt = 1:NoShunt, 1:T-1] == 0); # the real power output
-
-    @variable(m, B[1:SN, shunt=1:NoShunt, t=1:T-1] == 0); # the storage
-    @variable(m, R[1:SN, shunt=1:NoShunt, t=1:T-1] ==0);# the charge/discharge rate
-
-    @variable(m,
-        P_shunt[1:SN, shunt=1:NoShunt, t=1:T-1] == 0)
-    @variable(m, Q_shunt[1:SN, 1:NoShunt, 1:T-1]==-1000)
+    @variable(m, -1000
+        <=Q_shunt[1:SN, 1:NoShunt, 1:T-1]<=
+        1000)
 
 
-    @variable(m, P_bus[1:SN, 1:NoBus, 1:T-1]==-1000)
-    @variable(m, Q_bus[1:SN, 1:NoBus, 1:T-1]==-1000)
-    @variable(m, v[1:SN, 1:NoBus, 1:T-1]==0)
+    @variable(m, 1000>=P_bus[1:SN, 1:NoBus, 1:T-1]>=-1000)
+    @variable(m, 1000>=Q_bus[1:SN, 1:NoBus, 1:T-1]>=-1000)
+    @variable(m, V_max>=v[1:SN, 1:NoBus, 1:T-1]>=V_min)
+    @variable(m, pi/2 >= theta[1:SN, 1:NoBus, 1:T-1] >= -pi/2)
 
-    # Branch level
-    @variable(m, P_br[1:SN,1:NoBr, 1:T-1]==-1000)
-    @variable(m, Q_br[1:SN,1:NoBr, 1:T-1]==-1000)
-    @variable(m, l[1:SN,1:NoBr, 1:T-1]==0)
     # Gen Level
-    @variable(m, P_gen[1:SN, 1:NoGen, 1:T-1]==-1000)
-    @variable(m, Q_gen[1:SN, 1:NoGen, 1:T-1]==-1000)
+    @variable(m, 1000>=P_gen[1:SN, 1:NoGen, 1:T-1]>=-1000)
+    @variable(m, 1000>=Q_gen[1:SN, 1:NoGen, 1:T-1]>=-1000)
+
+    # @variable(m, Pg[1:SN, shunt = 1:NoShunt, t=1:T-1] == 0); # the real power output
+    # @variable(m, Qg[1:SN, shunt = 1:NoShunt, 1:T-1] == 0); # the real power output
+    #
+    # @variable(m, B[1:SN, shunt=1:NoShunt, t=1:T-1] == 0); # the storage
+    # @variable(m, R[1:SN, shunt=1:NoShunt, t=1:T-1] ==0);# the charge/discharge rate
+    #
+    # @variable(m,
+    #     P_shunt[1:SN, shunt=1:NoShunt, t=1:T-1] == 0)
+    # @variable(m, Q_shunt[1:SN, 1:NoShunt, 1:T-1]==-1000)
+    #
+    #
+    # @variable(m, P_bus[1:SN, 1:NoBus, 1:T-1]==-1000)
+    # @variable(m, Q_bus[1:SN, 1:NoBus, 1:T-1]==-1000)
+    # @variable(m, v[1:SN, 1:NoBus, 1:T-1]==0)
+    #
+    # # Branch level
+    # @variable(m, P_br[1:SN,1:NoBr, 1:T-1]==-1000)
+    # @variable(m, Q_br[1:SN,1:NoBr, 1:T-1]==-1000)
+    # @variable(m, l[1:SN,1:NoBr, 1:T-1]==0)
+    # # Gen Level
+    # @variable(m, P_gen[1:SN, 1:NoGen, 1:T-1]==-1000)
+    # @variable(m, Q_gen[1:SN, 1:NoGen, 1:T-1]==-1000)
 
     # #
     # # # for different scenario
-    # for scenario = 1:SN
-    #     # for different time at prediction horizion
-    #     for t=1:T-1
-    #         # for different bus
-    #         for shunt=1:NoShunt
-    #             # box constraints on Solar (Pg), Battery discharge (R)
-    #             @constraint(m, 0<=Pg[scenario, shunt ,t]);
-    #             # @constraint(m, R_min[shunt,t+1] <= R[scenario,shunt,t]);
-    #             # @constraint(m, R[scenario,shunt,t]<= R_max[shunt,t+1]);
-    #             # battery box constraint on SOC
-    #             # @constraint(m, B_min[shunt,t+1] <= B[scenario,shunt,t]);
-    #             @constraint(m, B[scenario,shunt,t]<= B_max[shunt,t+1]);
-    #             # battery SOC dynamics
-    #             if t==1
-    #                 @constraint(m, B[scenario,shunt,1] == B_rt[shunt,1]
-    #                     -delta_t*(R_rt[shunt,1]*baseMVA))
-    #             else
-    #                 @constraint(m, B[scenario,shunt,t] ==
-    #                     B[scenario,shunt,t-1] - R[scenario,shunt,t-1]*baseMVA*delta_t)
-    #             end
-    #             if shunt_struct.type[shunt, 1]==1
-    #                 # @constraint(m, Pg[scenario, shunt,t]<=
-    #                 #     positive_scalar(
-    #                 #     icdf*sqrt(pd.sigma[shunt,t+1]+pg.sigma[shunt,t+1])+pg.mu[shunt,t+1])
-    #                 #     );
-    #                 # @constraint(m, Qg[scenario, shunt,t]<=pg.sg_max[shunt, 1])
-    #                 # @constraint(m, Qg[scenario, shunt,t]>=-pg.sg_max[shunt, 1])
-    #                 @constraint(m,
-    #                     [pg.sg_max[shunt, 1], Pg[scenario, shunt,t], Qg[scenario, shunt,t] ]
-    #                     in SecondOrderCone());
-    #                 # @constraint(m,
-    #                 #     Qg[scenario, shunt, t]<=pg.sg_max[shunt, 1]);
-    #                 # real power on bus is demand minus solar and discharge
-    #                 # AKA power injection
-    #                 @constraint(m,  P_shunt[scenario,shunt,t]==
-    #                     Pd[shunt,t+1]
-    #                     -Pg[scenario,shunt,t]-R[scenario, shunt,t]);
-    #                 @constraint(m,  Q_shunt[scenario,shunt,t]==
-    #                     Qd[shunt,t+1]-Qg[scenario,shunt,t]);
+    for scenario = 1:SN
+        # for different time at prediction horizion
+        for t=1:T-1
+            # for different bus
+            for shunt=1:NoShunt
+                @constraint(m, B[scenario,shunt,t]<= B_max[shunt,t+1]);
+                # battery SOC dynamics
+                if t==1
+                    @constraint(m, B[scenario,shunt,1] == B_rt[shunt,1]
+                        -delta_t*(R_rt[shunt,1]*baseMVA))
+                else
+                    @constraint(m, B[scenario,shunt,t] ==
+                        B[scenario,shunt,t-1] - R[scenario,shunt,t-1]*baseMVA*delta_t)
+                end
+                if shunt_struct.type[shunt, 1]==1
 
-    #                 # SOC constrains on real and reactive power on bus
-    #                 # maxS = sqrt(1+Q_gamma^2)*(Pd[shunt,t+1]-positive_scalar(
-    #                 # icdf*sqrt(pd.sigma[shunt,t+1]+pg.sigma[shunt,t+1])+pg.mu[shunt,t+1])
-    #                 # -R_max[shunt,t+1]);
-    #                 # if maxS >=0
-    #                 #     @constraint(m,
-    #                 #     [maxS, P_shunt[scenario,shunt,t], Q_shunt[scenario,shunt,t]]
-    #                 #      in SecondOrderCone())
-    #                 # else
-    #                 #     @constraint(m,
-    #                 #     [-maxS, P_shunt[scenario,bus,t], Q_shunt[scenario,bus,t]]
-    #                 #      in SecondOrderCone())
-    #                 # end
-    #             elseif shunt_struct.type[shunt, 1]==2
-    #                 @constraint(m, Pg[scenario, shunt, t]==0)
-    #                 @constraint(m, Qg[scenario,shunt,t]==0)
-    #                 @constraint(m, P_shunt[scenario,shunt,t]==0)
+                    @constraint(m,
+                        [pg.sg_max[shunt, 1], Pg[scenario, shunt,t], Qg[scenario, shunt,t] ]
+                        in SecondOrderCone());
 
-    #                 if Qd[shunt, t+1] >= Q_bar;
-    #                     @constraint(m, Q_shunt[scenario,shunt,t]<=0)
-    #                     @constraint(m, Q_shunt[scenario,shunt,t]>=-Qf_max[shunt,1])
-    #                 else
-    #                     @constraint(m, Q_shunt[scenario,shunt,t]==0)
-    #                 end
+                    @constraint(m,  P_shunt[scenario,shunt,t]==
+                        -Pd[shunt,t+1]
+                        +Pg[scenario,shunt,t]+R[scenario, shunt,t]);
+                    @constraint(m,  Q_shunt[scenario,shunt,t]==
+                        -Qd[shunt,t+1]
+                        +Pg[scenario,shunt,t]);
 
-    #             end
-    #         end
-    #         for bus=1:NoBus
-    #             # id of shunts that belong to that bus
-    #             bus_shunt_list = findall(id->id==bus, shunt_struct.find_bus[:,1]);
-    #             # a list of branchs that FROM the bus of interest
-    #             sub_branch_list = findall(one->one==1, C_ind[bus,:]) # out
-    #             # a list of branchs that POINT TO the bus of interest
-    #             add_branch_list = findall(minusone->minusone==-1, C_ind[bus,:]) # In
+                elseif shunt_struct.type[shunt, 1]==2
+                    @constraint(m, Pg[scenario, shunt, t]==0)
+                    @constraint(m, Qg[scenario,shunt,t]==0)
+                    @constraint(m, P_shunt[scenario,shunt,t]==0)
 
-    #             if isempty(bus_shunt_list)
-    #                 @constraint(m, P_bus[scenario, bus, t] == 0)
-    #                 @constraint(m, Q_bus[scenario, bus, t] == 0)
-    #             elseif ~isempty(bus_shunt_list)
-    #                 @constraint(m, P_bus[scenario, bus, t] ==
-    #                     sum(P_shunt[scenario,Int(shunt),t] for shunt in bus_shunt_list))
-    #                 @constraint(m, Q_bus[scenario, bus, t] ==
-    #                     sum(Q_shunt[scenario,Int(shunt),t] for shunt in bus_shunt_list))
-    #             end
+                    if Qd[shunt, t+1] >= Q_bar;
+                        @constraint(m, Q_shunt[scenario,shunt,t]<=0)
+                        @constraint(m, Q_shunt[scenario,shunt,t]>=-Qf_max[shunt,1])
+                    else
+                        @constraint(m, Q_shunt[scenario,shunt,t]==0)
+                    end
 
-    #             ######## voltage
-    #             if bus_switch_shunt[bus] == 0
-    #                 # box constraint on bus
-    #                 @constraint(m, V_min^2<= v[scenario,bus,t]);
-    #                 @constraint(m, v[scenario,bus,t]<= V_max^2);
-    #             else
-    #                 switch_shunt_id = Int(bus_switch_shunt[bus])
-    #                 @constraint(m,
-    #                     shunt_struct.Vsp[switch_shunt_id]^2== v[scenario,bus,t]);
-    #             end
-    #             # if bus == 70
-    #             #     @constraint(m,
-    #             #         1.03569^2 == v[scenario,bus,t]);
-    #             # else
-    #             #     @constraint(m, V_min^2<= v[scenario,bus,t]);
-    #             #     @constraint(m, v[scenario,bus,t]<= V_max^2);
-    #             # end
-
-    #             if bus_struct.type[bus] == 1 # non-generator bus
-
-    #                 # Power Balance Equations
-    #                 # Power injection = Power Flow In - Power Flow Out
-    #                 if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
-    #                     @constraint(m, P_bus[scenario,bus,t]==
-    #                         sum(P_br[scenario,branch,t] for branch in add_branch_list)
-    #                         -sum(P_br[scenario,branch,t] for branch in sub_branch_list)
-    #                         );
-    #                     @constraint(m, Q_bus[scenario,bus,t]==
-    #                         sum(Q_br[scenario,branch,t] for branch in add_branch_list)
-    #                         -sum(x[branch]*l[scenario,branch,t] for branch in add_branch_list)
-    #                         -sum(Q_br[scenario,branch,t] for branch in sub_branch_list)
-    #                         );
-    #                 elseif ~isempty(add_branch_list) && isempty(sub_branch_list)
-    #                     @constraint(m, P_bus[scenario,bus,t]==
-    #                         sum(P_br[scenario,branch,t] for branch in add_branch_list)
-    #                         );
-    #                     @constraint(m, Q_bus[scenario,bus,t]==
-    #                         sum(Q_br[scenario,branch,t] for branch in add_branch_list)
-    #                         -sum(x[branch]*l[scenario,branch,t] for branch in add_branch_list)
-    #                         );
-    #                 elseif isempty(add_branch_list) && ~isempty(sub_branch_list)
-
-    #                     @constraint(m, P_bus[scenario,bus,t]==
-    #                         -sum(P_br[scenario,branch,t] for branch in sub_branch_list)
-    #                         );
-    #                     @constraint(m, Q_bus[scenario,bus,t]==
-    #                         -sum(Q_br[scenario,branch,t] for branch in sub_branch_list)
-    #                         );
-    #                 end
-    #             else # genertor bus
-
-    #                 gen_id = findall(bus_id ->bus_id == bus, gen_struct.bus[:,1]);
-
-    #                 if ~isempty(add_branch_list) && ~isempty(sub_branch_list)
-    #                     @constraint(m, P_bus[scenario,bus,t]==
-    #                         sum(P_br[scenario,branch,t] for branch in add_branch_list)
-    #                         -sum(P_br[scenario,branch,t] for branch in sub_branch_list)
-    #                         +P_gen[scenario,gen_id[1],t]);
-    #                     @constraint(m, Q_bus[scenario,bus,t]==
-    #                         sum(Q_br[scenario,branch,t] for branch in add_branch_list)
-    #                         -sum(x[branch]*l[scenario,branch,t] for branch in add_branch_list)
-    #                         -sum(Q_br[scenario,branch,t] for branch in sub_branch_list)
-    #                         +Q_gen[scenario,gen_id[1],t]);
-    #                 elseif ~isempty(add_branch_list) && isempty(sub_branch_list)
-    #                     @constraint(m, P_bus[scenario,bus,t]==
-    #                         sum(P_br[scenario,branch,t] for branch in add_branch_list)
-    #                         +P_gen[scenario,gen_id[1],t]);
-    #                     @constraint(m, Q_bus[scenario,bus,t]==
-    #                         sum(Q_br[scenario,branch,t] for branch in add_branch_list)
-    #                         -sum(x[branch]*l[scenario,branch,t] for branch in add_branch_list)
-    #                         +Q_gen[scenario,gen_id[1],t]);
-    #                 elseif isempty(add_branch_list) && ~isempty(sub_branch_list)
-    #                     @constraint(m, P_bus[scenario,bus,t]==
-    #                         -sum(P_br[scenario,branch,t] for branch in sub_branch_list)
-    #                         +P_gen[scenario,gen_id[1],t]);
-    #                     @constraint(m, Q_bus[scenario,bus,t]==
-    #                         -sum(Q_br[scenario,branch,t] for branch in sub_branch_list)
-    #                         +Q_gen[scenario,gen_id[1],t]);
-    #                 end
-    #             end
-    #         end
-
-    #         for branch =1:NoBr
-    #             fbus = Int(branch_struct.fbus[branch]);
-    #             tbus = Int(branch_struct.tbus[branch]);
-    #             @constraint(m, v[scenario,fbus,t]-v[scenario,tbus,t]==
-    #                 2*(r[branch]*P_br[scenario,branch,t]
-    #                 +x[branch]*Q_br[scenario,branch,t])
-    #                 -(r[branch]^2+x[branch]^2)*l[scenario,branch,t]);
-
-    #             @constraint(m,
-    #                 2*reference_points.p_star[branch,1]*P_br[scenario,branch,t]
-    #                 +2*reference_points.q_star[branch,1]*Q_br[scenario,branch,t]
-    #                 -reference_points.v_star[fbus,1]*l[scenario,branch,t]
-    #                 -reference_points.l_star[branch,1]*v[scenario,fbus,t]
-    #                 == 0
-    #                 );
-    #         end
-    #         for Gen=2:NoGen
-    #             @constraint(m,
-    #                 P_gen[scenario,Gen,t]==Pd_agg[1,t+1]*P_Percent[Gen])
-    #             # @constraint(m,
-    #             #     Q_gen[scenario,Gen,t]==Qd_agg[1,t+1]*Q_Percent[Gen])
-    #             # @constraint(m,
-    #             #     P_gen[scenario,Gen,t]<=gen_struct.Pmax[Gen]/baseMVA)
-    #             # @constraint(m,
-    #             #     P_gen[scenario,Gen,t]>=gen_struct.Pmin[Gen]/baseMVA)
-    #             @constraint(m,
-    #                 Q_gen[scenario,Gen,t]<=gen_struct.Qmax[Gen]/baseMVA)
-    #             @constraint(m,
-    #                 Q_gen[scenario,Gen,t]>=gen_struct.Qmin[Gen]/baseMVA)
-    #         end
+                end
+            end
+            for bus=1:NoBus
+                # id of shunts that belong to that bus
+                bus_shunt_list = findall(id->id==bus, shunt_struct.find_bus[:,1]);
 
 
-    #     end
-    # end
+
+                # if bus == 70
+                #     @constraint(m,
+                #         1.03569^2 == v[scenario,bus,t]);
+                # else
+                #     @constraint(m, V_min^2<= v[scenario,bus,t]);
+                #     @constraint(m, v[scenario,bus,t]<= V_max^2);
+                # end
+
+                if bus_struct.type[bus] == 1 # PQ bus
+
+                    if isempty(bus_shunt_list)
+                        @constraint(m, P_bus[scenario, bus, t] == 0)
+                        @constraint(m, Q_bus[scenario, bus, t] == 0)
+                    elseif ~isempty(bus_shunt_list)
+                        @constraint(m, P_bus[scenario, bus, t] ==
+                            sum(P_shunt[scenario,Int(shunt),t] for
+                            shunt in bus_shunt_list))
+                        @constraint(m, Q_bus[scenario, bus, t] ==
+                            sum(Q_shunt[scenario,Int(shunt),t] for
+                            shunt in bus_shunt_list))
+                    end
+                else # genertor bus
+
+                    gen_id = findall(bus_id ->bus_id == bus, gen_struct.bus[:,1]);
+
+                    if bus_struct.type[bus]==3 # slack bus constraint
+                        @constraint(m, theta[scenario, bus, t] == theta_star[bus, 1])
+                        @constraint(m, v_star[bus,1]== v[scenario, bus, t]);
+
+                    elseif bus_struct.type[bus]==2 # PV bus constraint
+                        @constraint(m, v_star[bus,1]== v[scenario, bus, t]);
+                        @constraint(m, P_gen[scenario,gen_id[1],t]
+                                ==Pd_agg[1,t+1]*P_Percent[gen_id[1]]);
+                    end
+
+                    if isempty(bus_shunt_list)
+                        @constraint(m, P_bus[scenario, bus, t] ==
+                            P_gen[scenario,gen_id[1],t])
+                        @constraint(m, Q_bus[scenario, bus, t] ==
+                            Q_gen[scenario,gen_id[1],t])
+                    elseif ~isempty(bus_shunt_list)
+                        @constraint(m, P_bus[scenario, bus, t] ==
+                            sum(P_shunt[scenario,Int(shunt),t] for
+                            shunt in bus_shunt_list)
+                            +P_gen[scenario,gen_id[1],t])
+                        @constraint(m, Q_bus[scenario, bus, t] ==
+                            sum(Q_shunt[scenario,Int(shunt),t] for
+                            shunt in bus_shunt_list)
+                            +Q_gen[scenario,gen_id[1],t])
+                    end
+                end
+                @constraint(m, -P_bus[scenario,bus,t] + P_bus_star[bus,1]
+                    +sum(
+                    (v[scenario,bus,t] - v_star[bus,1])*v_star[bus_other,1]*
+                    (G_con[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1])+
+                    B_sus[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1]))
+                    +(v[scenario,bus_other,t] - v_star[bus_other,1])*v_star[bus,1]*
+                    (G_con[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1])+
+                    B_sus[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1]))
+                    +v_star[bus_other,1]*v_star[bus,1]*
+                    (-G_con[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1])+
+                    B_sus[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1]))
+                    *(theta[scenario,bus,t]-theta_star[bus,1])
+                    +v_star[bus_other,1]*v_star[bus,1]*
+                    (G_con[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1])
+                    -B_sus[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1]))
+                    *(theta[scenario,bus_other,t]-theta_star[bus_other,1])
+                    for bus_other in 1:NoBus) == 0
+                    );
+
+
+                @constraint(m, -Q_bus[scenario,bus,t] + Q_bus_star[bus,1]
+                    +sum((v[scenario,bus,t] - v_star[bus,1])*v_star[bus_other,1]*
+                    (G_con[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1])
+                    -B_sus[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1]))
+                    +(v[scenario,bus_other,t] - v_star[bus_other,1])*v_star[bus,1]*
+                    (G_con[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1])
+                    -B_sus[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1]))
+                    +v_star[bus_other,1]*v_star[bus,1]*
+                    (G_con[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1])
+                    +B_sus[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1]))
+                    *(theta[scenario,bus,t]-theta_star[bus, 1])
+                    +v_star[bus_other,1]*v_star[bus,1]*
+                    (-G_con[bus, bus_other]*cos(theta_star[bus, 1]-theta_star[bus_other, 1])
+                    -B_sus[bus, bus_other]*sin(theta_star[bus, 1]-theta_star[bus_other, 1]))
+                    *(theta[scenario,bus_other,t]-theta_star[bus_other, 1])
+                    for bus_other in 1:NoBus) == 0
+                    );
+            end
+
+
+        end
+    end
     #
     #
     if ancillary_type == "10min" || ancillary_type == "30min"
@@ -1096,100 +944,99 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     println(string("    ----current demand: ", baseMVA*sum(Pd[:,1])))
 
 
+
     probability = price.probability[1:SN];
     scenario_of_interest = findall(ind->ind==maximum(probability), probability)[1]
     # println(scenario_of_interest);
-
+    # println(string("    ----current demand: ", size(Pd)))
+    println(string("    ----current demand: ", Pd[1:4,1]))
+    println(string("    ----current reactivendemand: ", Qd[1:4,1]))
     ###############
     R_rt_o=JuMP.value.(R_rt)
-    R_o=JuMP.value.(R)
-    R_sum_ct = sum(R_rt_o[:, 1])
-    println(string("    ----current battery disharge: ", R_sum_ct))
-    R_traj = hcat(R_rt_o, R_o[scenario_of_interest,:,:])
-    ###############
-    P_br_rt_o=zeros(NoBr,1)
-    P_br_o=zeros(1,NoBr,288)
-    P_br_traj = hcat(P_br_rt_o, P_br_o[scenario_of_interest,:,:])
+    println(string("    ----current battery disharge: ", sum(R_rt_o)))
 
     ###############
-    Q_br_rt_o=zeros(NoBr,1)
-    Q_br_o=zeros(1,NoBr,288)
-    Q_br_traj = hcat(Q_br_rt_o, Q_br_o[scenario_of_interest,:,:])
-    ###############
     v_rt_o=JuMP.value.(v_rt)
-    v_o=JuMP.value.(v)
-    v_traj = hcat(v_rt_o, v_o[scenario_of_interest,:,:])
+    println(string("    ----current voltage: ", v_rt_o))
+
     ################
     B_rt_o=JuMP.value.(B_rt)
-    B_o=JuMP.value.(B)
-    B_traj = hcat(B_rt_o, B_o[scenario_of_interest,:,:])
+    # B_o=JuMP.value.(B)
+    # B_traj = hcat(B_rt_o, B_o[scenario_of_interest,:,:])
     ###############
     Pg_rt_o=JuMP.value.(Pg_rt)
-    Pg_o=JuMP.value.(Pg)
-    Pg_traj = hcat(Pg_rt_o, Pg_o[scenario_of_interest,:,:])
+    println(string("    ----current solar usage: ", sum(Pg_rt_o)))
+    # Pg_o=JuMP.value.(Pg)
+    # Pg_traj = hcat(Pg_rt_o, Pg_o[scenario_of_interest,:,:])
     #
 
     Qg_rt_o=JuMP.value.(Qg_rt)
-    Qg_o=JuMP.value.(Qg)
-    Qg_traj = hcat(Qg_rt_o, Qg_o[scenario_of_interest,:,:])
+    println(string("    ----current reactive solar usage: ", sum(Pg_rt_o)))
+
+    # net_demand = Pd - Pg_rt_o;
+    # Qg_o=JuMP.value.(Qg)
+    # Qg_traj = hcat(Qg_rt_o, Qg_o[scenario_of_interest,:,:])
 
     ############
     P_shunt_rt_o=JuMP.value.(P_shunt_rt)
-    P_shunt_o=JuMP.value.(P_shunt)
-    P_shunt_traj = hcat(P_shunt_rt_o, P_shunt_o[scenario_of_interest,:,:])
+    # P_shunt_o=JuMP.value.(P_shunt)
+    # P_shunt_traj = hcat(P_shunt_rt_o, P_shunt_o[scenario_of_interest,:,:])
     println(string("    ----current real on shunt: ",
         sum(P_shunt_rt_o)))
 
     ############
     Q_shunt_rt_o=JuMP.value.(Q_shunt_rt)
-    Q_shunt_o=JuMP.value.(Q_shunt)
-    Q_shunt_traj = hcat(Q_shunt_rt_o, Q_shunt_o[scenario_of_interest,:,:])
+    # Q_shunt_o=JuMP.value.(Q_shunt)
+    # Q_shunt_traj = hcat(Q_shunt_rt_o, Q_shunt_o[scenario_of_interest,:,:])
     println(string("    ----current reactive on shunt: ",
         sum(Q_shunt_rt_o)))
     ############
     P_bus_rt_o=JuMP.value.(P_bus_rt)
-    P_bus_o=JuMP.value.(P_bus)
-    P_bus_traj = hcat(P_bus_rt_o, P_bus_o[scenario_of_interest,:,:])
+    # P_bus_o=JuMP.value.(P_bus)
+    # P_bus_traj = hcat(P_bus_rt_o, P_bus_o[scenario_of_interest,:,:])
     println(string("    ----current real on bus: ",
         sum(P_bus_rt_o)))
 
     ############
     Q_bus_rt_o=JuMP.value.(Q_bus_rt)
-    Q_bus_o=JuMP.value.(Q_bus)
-    Q_bus_traj = hcat(Q_bus_rt_o, Q_bus_o[scenario_of_interest,:,:])
+    # Q_bus_o=JuMP.value.(Q_bus)
+    # Q_bus_traj = hcat(Q_bus_rt_o, Q_bus_o[scenario_of_interest,:,:])
     println(string("    ----current reactive on bus: ",
         sum(Q_bus_rt_o)))
 
     ############
     P_gen_rt_o=JuMP.value.(P_gen_rt)
-    P_gen_o=JuMP.value.(P_gen)
-    P_gen_traj = hcat(P_gen_rt_o, P_gen_o[scenario_of_interest,:,:])
-    P_gen_sum_traj = hcat(sum(P_gen_rt_o), sum(P_gen_o[scenario_of_interest,:,:], dims=1))
+    # P_gen_o=JuMP.value.(P_gen)
+    # P_gen_traj = hcat(P_gen_rt_o, P_gen_o[scenario_of_interest,:,:])
+    # P_gen_sum_traj = hcat(sum(P_gen_rt_o), sum(P_gen_o[scenario_of_interest,:,:], dims=1))
     # println(size(P_gen_sum_traj))
 
     P_gen_sum_ct = sum(P_gen_rt_o[gen, 1] for gen in 1:NoGen)
     println(string("    ----current generation: ", P_gen_sum_ct))
-    P_gen_sum_ct2 = sum(P_gen_rt_o[gen, 1] for gen in 2:NoGen)
+    P_gen_sum_ct2 = sum(P_gen_rt_o[gen, 1] for gen in 1:1)
     println(string("    ----current generation of non slack bus: ", P_gen_sum_ct2))
 
     println(string("    ----current star generation: ",
         sum(reference_points.P_gen)))
+    println(string("    ----current real generation: ",P_gen_rt_o))
 
 
     ############
     Q_gen_rt_o = JuMP.value.(Q_gen_rt)
-    Q_gen_o = JuMP.value.(Q_gen)
-    Q_gen_traj = hcat(Q_gen_rt_o, Q_gen_o[scenario_of_interest,:,:])
-    Q_gen_sum_traj = hcat(sum(Q_gen_rt_o), sum(Q_gen_o[scenario_of_interest,:,:], dims=1))
+
+    # Q_gen_o = JuMP.value.(Q_gen)
+    # Q_gen_traj = hcat(Q_gen_rt_o, Q_gen_o[scenario_of_interest,:,:])
+    # Q_gen_sum_traj = hcat(sum(Q_gen_rt_o), sum(Q_gen_o[scenario_of_interest,:,:], dims=1))
     Q_gen_sum_ct = sum(Q_gen_rt_o[gen, 1] for gen in 1:NoGen)
     println(string("    ----current reactive generation: ",
         sum(Q_gen_sum_ct)))
-
+    println(string("    ----current reactive generation: ",Q_gen_rt_o))
     ############
     peak_withdraw_o = JuMP.value.(peak_withdraw);
     ###########
-    theta_o = JuMP.value.(theta);
-    println(theta_o[70,1])
+    theta_rt_o = JuMP.value.(theta_rt);
+    println(string("    ----phase angle: ",
+        theta_rt_o))
     # println("print voltage constraint")
     # for branch =15:16
     #     fbus = branch_struct.fbus[branch];
@@ -1235,8 +1082,11 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
             delta_t*P_rsrv_rt_o*price.alpha_ct;
     end
    # println(price.alpha_ct)
-    P_cul = sum(pg.mu_ct)-sum(Pg_rt_o)
-    println(string("    ----curtailment solar: ", P_cul))
+    P_cul = zeros(length(pg.mu[:,1]),1)
+    for shunt = 1: length(pg.mu[:,1])
+        P_cul[shunt,1] = pg.mu[shunt,1]-Pg_rt_o[shunt,1]
+    end
+    println(string("    ----curtailment solar: ", sum(P_cul)))
     alpha_1 = price.alpha_scenario[1,:]
     lambda_1 = price.lambda_scenario[1,:]
 
@@ -1244,113 +1094,11 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     pg_upper = hcat(
     icdf*sqrt.(pd.sigma[:,:]+pg.sigma[:,:])+pg.mu[:,:])
 
-    ########################
-    # feeders of interest
-    FOL_pred_length = 12;
-
-    R_FOL = zeros(3, FOL_pred_length)
-    Pg_FOL = zeros(3, FOL_pred_length)
-    P_FOL = zeros(3, FOL_pred_length)
-    Q_FOL = zeros(3, FOL_pred_length)
-    v_FOL_sqr = zeros(3, FOL_pred_length)
-    v_FOL = zeros(3, FOL_pred_length)
-    Feeder_shunt_number = [4, 2, 5]
-    Feeder_bus_number = [3, 2, 3]
-    scenario_poll = 1:SN
-
-    for feeder = 1:3
-        R_FOL[feeder, :] = hcat(R_rt_o[Feeder_shunt_number[feeder], 1],
-            reshape(sum(probability[scenario]
-            *R_o[scenario,Feeder_shunt_number[feeder],1:FOL_pred_length-1]
-            for scenario in scenario_poll)
-            , 1, FOL_pred_length-1));
-        Pg_FOL[feeder, :] = hcat(Pg_rt_o[Feeder_shunt_number[feeder], 1],
-            reshape(sum(probability[scenario]
-            *Pg_o[scenario,Feeder_shunt_number[feeder],1:FOL_pred_length-1]
-            for scenario in scenario_poll)
-            , 1, FOL_pred_length-1));
-        P_FOL[feeder, :] = hcat(P_shunt_rt_o[Feeder_shunt_number[feeder], 1],
-            reshape(sum(probability[scenario]
-            *P_shunt_o[scenario,Feeder_shunt_number[feeder],1:FOL_pred_length-1]
-            for scenario in scenario_poll)
-            , 1, FOL_pred_length-1));
-        Q_FOL[feeder, :] = hcat(Q_shunt_rt_o[Feeder_shunt_number[feeder], 1],
-            reshape(sum(probability[scenario]
-            *Q_shunt_o[scenario,Feeder_shunt_number[feeder],1:FOL_pred_length-1]
-            for scenario in scenario_poll)
-            , 1, FOL_pred_length-1));
-        v_FOL_sqr[feeder, :] = hcat(v_rt_o[Feeder_bus_number[feeder], 1],
-            reshape(sum(probability[scenario]
-            *v_o[scenario,Feeder_bus_number[feeder],1:FOL_pred_length-1]
-            for scenario in scenario_poll)
-            , 1, FOL_pred_length-1));
-    end
-    v_FOL=sqrt.(v_FOL_sqr)
-
-
-    # R_FOL = vcat(
-    #     reshape(sum(R_traj[2,1:FOL_pred_length]),1,FOL_pred_length),
-    #     reshape(R_traj[4,1:FOL_pred_length],1,FOL_pred_length),
-    #     reshape(R_traj[5,1:FOL_pred_length],1,FOL_pred_length));
-    # Pg_FOL = vcat(
-    #         reshape(Pg_traj[2,1:FOL_pred_length],1,FOL_pred_length),
-    #         reshape(Pg_traj[4,1:FOL_pred_length],1,FOL_pred_length),
-    #         reshape(Pg_traj[5,1:FOL_pred_length],1,FOL_pred_length));
-    # Q_FOL = vcat(
-    #     reshape(Q_shunt_traj[2,1:FOL_pred_length],1,FOL_pred_length),
-    #     reshape(Q_shunt_traj[4,1:FOL_pred_length],1,FOL_pred_length),
-    #     reshape(Q_shunt_traj[5,1:FOL_pred_length],1,FOL_pred_length));
-    # P_FOL = vcat(
-    #     reshape(P_shunt_traj[2,1:FOL_pred_length],1,FOL_pred_length),
-    #     reshape(P_shunt_traj[4,1:FOL_pred_length],1,FOL_pred_length),
-    #     reshape(P_shunt_traj[5,1:FOL_pred_length],1,FOL_pred_length));
-    # v_FOL = vcat(
-    #     reshape(sqrt.(v_traj[1,1:FOL_pred_length]),1,FOL_pred_length),
-    #     reshape(sqrt.(v_traj[2,1:FOL_pred_length]),1,FOL_pred_length),
-    #     reshape(sqrt.(v_traj[2,1:FOL_pred_length]),1,FOL_pred_length));
-
-    ########################
-    # for bus = 1:79
-        # println(string("BUS ", bus))
-        # diff = (-P_bus_rt_o[bus,1] + P_bus_star[bus,1]
-        # +sum(
-        # (v_rt_o[bus,1] - v_star[bus,1])*v_star[bus_other,1]*
-        # (G_con[bus, bus_other]*cos(theta_star[bus, bus_other])+
-        # B_sus[bus, bus_other]*sin(theta_star[bus, bus_other]))
-        # +(v_rt_o[bus_other,1] - v_star[bus_other,1])*v_star[bus,1]*
-        # (G_con[bus, bus_other]*cos(theta_star[bus, bus_other])+
-        # B_sus[bus, bus_other]*sin(theta_star[bus, bus_other]))
-        # +v_star[bus_other,1]*v_star[bus,1]*
-        # (-G_con[bus, bus_other]*sin(theta_star[bus, bus_other])+
-        # B_sus[bus, bus_other]*cos(theta_star[bus, bus_other]))
-        # *(theta_o[bus, bus_other]-theta_star[bus, bus_other])
-        # for bus_other in 1:NoBus)
-        # );
-        # println(string("real differnence = ", diff ))
-    # end
-    # println(theta_star[70,:])
-    # theta_diff = theta_star-theta_o;
-    # println(theta_diff[70,:])
-    # println(theta_o)
-
     val_opt = (R=(R_rt_o), B=(B_rt_o), Pg=(Pg_rt_o), Qg=(Qg_rt_o),
         P_gen=(P_gen_rt_o), Q_gen=(Q_gen_rt_o),
-        P_rsrv=(P_rsrv_rt_o), B_rsrv=(B_rsrv_rt_o),
         P_bus=(P_bus_rt_o), Q_bus=(Q_bus_rt_o),
-        v=(v_rt_o), P_br=(P_br_rt_o), Q_br=(Q_br_rt_o),
-        Cost_real=(Cost_real), time_solve=(time_solve),
-        P_rsrv_total=(P_rsrv_total), B_rsrv_total=(B_rsrv_total),
-        alpha_1=(alpha_1),
-        R_traj = (R_traj), B_traj=(B_traj),
-        Pg_traj=(Pg_traj), Qg_traj=(Qg_traj),
-        P_gen_traj=(P_gen_traj),
-        Q_gen_traj=(Q_gen_traj),
-        P0_traj = (P_gen_traj), P_bus_traj=(P_bus_traj), Q_bus_traj=(Q_bus_traj),
-        pg_upper=(pg_upper),
-        lambda_1=(lambda_1), pd=(pd), pg=(pg), v_traj=(v_traj), P_br_traj=(P_br_traj),
-        Q_br_traj=(Q_br_traj), terminate_s = (terminate_s), P_cul = (P_cul),
-        R_FOL = (R_FOL), Pg_FOL = (Pg_FOL), Q_FOL = (Q_FOL),
-        P_FOL = (P_FOL), v_FOL = (v_FOL), peak_withdraw = (peak_withdraw_o));
+        v=(v_rt_o), theta_rt = (theta_rt_o),
+        time_solve=(time_solve), P_cul=(P_cul));
 
 
     return val_opt
@@ -1643,6 +1391,25 @@ function write_output_out(val_opt, P_rsrv_feed, Pd_bus, filename)
     println("    ---- Finish writting files! ")
 end
 
+function write_4bus_out(P_gen, Q_gen, v, theta, val_rp, filename)
+        # write the solar file
+
+    P_gen = reshape(vcat(P_gen,zeros(2,1)),4,1)
+    Q_gen = reshape(vcat(Q_gen,zeros(2,1)),4,1)
+    v = reshape(v,4,1)
+    theta = reshape(theta,4,1)
+    P_gen_star = reshape(vcat(val_rp.P_gen,zeros(2,1)),4,1)
+    Q_gen_star = reshape(vcat(val_rp.Q_gen,zeros(2,1)),4,1)
+    v_star = reshape(val_rp.v_magnitude,4,1)
+    theta_star = reshape(val_rp.v_polar,4,1)
+
+    RT_data_feeder=hcat(P_gen, Q_gen, v, theta, P_gen_star, Q_gen_star,
+     v_star, theta_star)
+    CSV.write(filename, DataFrame(RT_data_feeder,
+        [:P_gen, :Q_gen, :v, :theta, :P_gen_star, :Q_gen_star, :v_star,
+         :theta_star]));
+    println("    ---- Finish writting files! ")
+end
 # function reference_point(Pd_bus, Qd_bus)
 #     silence()
 #     # network_data = PowerModels.parse_matpower("data/case5.m")
@@ -1709,16 +1476,109 @@ end
 #         v_star=(V_bus));
 # end
 
-function reference_point(Pd_bus, Qd_bus)
+# function reference_point(Pd_bus, Qd_bus)
+#     silence()
+#     P_Percent = [0.636, 1-0.636];
+#     Pd_sum = sum(Pd_bus);
+#     # network_data = PowerModels.parse_matpower("data/case5.m")
+#     network_data = PowerModels.parse_matpower("GML_data/NYISO-data/case4gs.m")
+#
+#     # Change data
+#
+#     # println(network_data["load"])
+#     # this is for PQ bus, in which we change the demand but keep the solar;
+#     for (load_name, data) in network_data["load"]
+#         load_id = parse(Int64, load_name);
+#         load_in_bus = data["load_bus"];
+#         data["qd"] = Qd_bus[load_in_bus,1];
+#         data["pd"] = Pd_bus[load_in_bus,1];
+#     end
+#
+#     for (gen_name, gen_data) in network_data["gen"]
+#         gen_id = parse(Int64, gen_name);
+#         gen_data["pg"] = Pd_sum*P_Percent[gen_id];
+#     end
+#
+#     # result = run_pf(network_data, ACPPowerModel, Ipopt.Optimizer);
+#     power_flow_result = run_pf(network_data, ACPPowerModel, Ipopt.Optimizer);
+#     # build_pf(network_data)
+#     update_data!(network_data, power_flow_result["solution"])
+#     flows = calc_branch_flow_ac(network_data)
+#     ad_matrix = calc_admittance_matrix(network_data)
+#     update_data!(network_data, flows)
+#
+#     NoBranch = length(flows["branch"]);
+#     NoBus = length(power_flow_result["solution"]["bus"]);
+#     #
+#     v_magnitude = zeros(NoBus,1)
+#     v_polar = zeros(NoBus, 1)
+#     v_bus = zeros(ComplexF64, NoBus, 1)
+#     V_bus = zeros(NoBus, 1)
+#     for (bus_name, data) in power_flow_result["solution"]["bus"]
+#         bus_id = parse(Int64, bus_name);
+#         # println(bus_id)
+#         v_magnitude[bus_id,1] = power_flow_result["solution"]["bus"][bus_name]["vm"];
+#         # println(v_magnitude)
+#         v_polar[bus_id,1] = power_flow_result["solution"]["bus"][bus_name]["va"];
+#         # println(v_polar)
+#         v_bus[bus_id,1] = v_magnitude[bus_id,1]*exp(v_polar[bus_id,1]*im);
+#         # println(v_bus[bus_id,1])
+#         V_bus[bus_id,1] = v_bus[bus_id,1]*conj(v_bus[bus_id,1]);
+#         # println(V_bus[bus_id,1])
+#     end
+#     Theta = zeros(NoBus, NoBus)
+#     G_con = zeros(NoBus, NoBus)
+#     B_sus = zeros(NoBus, NoBus)
+#     for bus_row = 1:NoBus
+#         for bus_column = 1:NoBus
+#             Theta[bus_row, bus_column] = v_polar[bus_row,1]-v_polar[bus_column,1];
+#             G_con[bus_row, bus_column] = ad_matrix.matrix[bus_row, bus_column].re;
+#             B_sus[bus_row, bus_column] = ad_matrix.matrix[bus_row, bus_column].im;
+#         end
+#     end
+#
+#     P_branch=zeros(NoBranch,1);
+#     Q_branch=zeros(NoBranch,1);
+#     i_branch=zeros(ComplexF64, NoBranch,1);
+#     L_branch=zeros(NoBranch,1);
+#
+#     for (branch_name, data) in network_data["branch"]
+#         # println(branch_name)
+#         branch_id = parse(Int64, branch_name);
+#         f_bus = network_data["branch"][branch_name]["f_bus"];
+#         t_bus = network_data["branch"][branch_name]["t_bus"];
+#         P_branch[branch_id,1] = network_data["branch"][branch_name]["pf"];
+#         Q_branch[branch_id,1] = network_data["branch"][branch_name]["qf"];
+#         i_branch[branch_id,1] = conj(
+#         (P_branch[branch_id,1]+Q_branch[branch_id,1]*im)/v_bus[f_bus,1]
+#         );
+#         L_branch[branch_id,1] = i_branch[branch_id,1]*conj(i_branch[branch_id,1]);
+#
+#     end
+#     P_gen =zeros(2,1)
+#     Q_gen =zeros(2,1)
+#     for (gen_name, gen_data) in power_flow_result["solution"]["gen"]
+#         gen_id = parse(Int64, gen_name);
+#         P_gen[gen_id,1] = gen_data["pg"];
+#         Q_gen[gen_id,1] = gen_data["qg"];
+#     end
+#     return optimal_setpoints=(p_star=(P_branch), q_star=(Q_branch), l_star=(L_branch),
+#         v_star=(V_bus), network_data=(network_data), v_magnitude=(v_magnitude),
+#         v_polar = (v_polar), ad_matrix = (ad_matrix), Theta = (Theta), G_con=(G_con),
+#         B_sus = (B_sus), power_flow_result=(power_flow_result),
+#         Pd_bus = (Pd_bus), Qd_bus = (Qd_bus), P_gen=(P_gen), Q_gen=(Q_gen));
+# end
+
+
+function reference_point(Pd_sum, Pd_bus, Qd_bus)
+    # Pd_sum: sum of demands
+    # Pd_bus: NET real demand on bus, i.e., demand - solar (a.k.a. realization)
+    # Qd_bus: NET reacive demand on bus, i.e., demand
     silence()
-    P_Percent = [0.636, 1-0.636];
-    Pd_sum = sum(Pd_bus);
-    # network_data = PowerModels.parse_matpower("data/case5.m")
+
+    # Import network data
     network_data = PowerModels.parse_matpower("GML_data/NYISO-data/case4gs.m")
 
-    # Change data
-
-    # println(network_data["load"])
     # this is for PQ bus, in which we change the demand but keep the solar;
     for (load_name, data) in network_data["load"]
         load_id = parse(Int64, load_name);
@@ -1727,77 +1587,58 @@ function reference_point(Pd_bus, Qd_bus)
         data["pd"] = Pd_bus[load_in_bus,1];
     end
 
+    #  this is for PV bus
+    P_Percent = [0.636, 0.364];
+    println(Pd_sum)
     for (gen_name, gen_data) in network_data["gen"]
         gen_id = parse(Int64, gen_name);
         gen_data["pg"] = Pd_sum*P_Percent[gen_id];
     end
 
+    # calculate the power flow
     # result = run_pf(network_data, ACPPowerModel, Ipopt.Optimizer);
     power_flow_result = run_pf(network_data, ACPPowerModel, Ipopt.Optimizer);
-    # build_pf(network_data)
-    update_data!(network_data, power_flow_result["solution"])
-    flows = calc_branch_flow_ac(network_data)
-    ad_matrix = calc_admittance_matrix(network_data)
-    update_data!(network_data, flows)
-
-    NoBranch = length(flows["branch"]);
     NoBus = length(power_flow_result["solution"]["bus"]);
-    #
-    v_magnitude = zeros(NoBus,1)
-    v_polar = zeros(NoBus, 1)
-    v_bus = zeros(ComplexF64, NoBus, 1)
-    V_bus = zeros(NoBus, 1)
-    for (bus_name, data) in power_flow_result["solution"]["bus"]
-        bus_id = parse(Int64, bus_name);
-        # println(bus_id)
-        v_magnitude[bus_id,1] = power_flow_result["solution"]["bus"][bus_name]["vm"];
-        # println(v_magnitude)
-        v_polar[bus_id,1] = power_flow_result["solution"]["bus"][bus_name]["va"];
-        # println(v_polar)
-        v_bus[bus_id,1] = v_magnitude[bus_id,1]*exp(v_polar[bus_id,1]*im);
-        # println(v_bus[bus_id,1])
-        V_bus[bus_id,1] = v_bus[bus_id,1]*conj(v_bus[bus_id,1]);
-        # println(V_bus[bus_id,1])
-    end
-    Theta = zeros(NoBus, NoBus)
+
+    # calculate the admittance matrix, conductance, and susceptance
+    ad_matrix = calc_admittance_matrix(network_data)
     G_con = zeros(NoBus, NoBus)
     B_sus = zeros(NoBus, NoBus)
     for bus_row = 1:NoBus
         for bus_column = 1:NoBus
-            Theta[bus_row, bus_column] = v_polar[bus_row,1]-v_polar[bus_column,1];
             G_con[bus_row, bus_column] = ad_matrix.matrix[bus_row, bus_column].re;
             B_sus[bus_row, bus_column] = ad_matrix.matrix[bus_row, bus_column].im;
         end
     end
 
-    P_branch=zeros(NoBranch,1);
-    Q_branch=zeros(NoBranch,1);
-    i_branch=zeros(ComplexF64, NoBranch,1);
-    L_branch=zeros(NoBranch,1);
 
-    for (branch_name, data) in network_data["branch"]
-        # println(branch_name)
-        branch_id = parse(Int64, branch_name);
-        f_bus = network_data["branch"][branch_name]["f_bus"];
-        t_bus = network_data["branch"][branch_name]["t_bus"];
-        P_branch[branch_id,1] = network_data["branch"][branch_name]["pf"];
-        Q_branch[branch_id,1] = network_data["branch"][branch_name]["qf"];
-        i_branch[branch_id,1] = conj(
-        (P_branch[branch_id,1]+Q_branch[branch_id,1]*im)/v_bus[f_bus,1]
-        );
-        L_branch[branch_id,1] = i_branch[branch_id,1]*conj(i_branch[branch_id,1]);
 
+
+
+
+    # calculate the voltage phase angle and magnitude
+
+    v_magnitude = zeros(NoBus,1)
+    v_polar = zeros(NoBus, 1)
+    for (bus_name, data) in power_flow_result["solution"]["bus"]
+        bus_id = parse(Int64, bus_name);
+        v_magnitude[bus_id,1] = power_flow_result["solution"]["bus"][bus_name]["vm"];
+        v_polar[bus_id,1] = power_flow_result["solution"]["bus"][bus_name]["va"];
     end
-    P_gen =zeros(9,1)
-    Q_gen =zeros(9,1)
+
+
+    # calculate the power generation
+
+    P_gen =zeros(2,1)
+    Q_gen =zeros(2,1)
     for (gen_name, gen_data) in power_flow_result["solution"]["gen"]
         gen_id = parse(Int64, gen_name);
         P_gen[gen_id,1] = gen_data["pg"];
         Q_gen[gen_id,1] = gen_data["qg"];
     end
-    return optimal_setpoints=(p_star=(P_branch), q_star=(Q_branch), l_star=(L_branch),
-        v_star=(V_bus), network_data=(network_data), v_magnitude=(v_magnitude),
-        v_polar = (v_polar), ad_matrix = (ad_matrix), Theta = (Theta), G_con=(G_con),
+    return optimal_setpoints=(
+        network_data=(network_data), v_magnitude=(v_magnitude),
+        v_polar = (v_polar), ad_matrix = (ad_matrix), G_con=(G_con),
         B_sus = (B_sus), power_flow_result=(power_flow_result),
         Pd_bus = (Pd_bus), Qd_bus = (Qd_bus), P_gen=(P_gen), Q_gen=(Q_gen));
 end
