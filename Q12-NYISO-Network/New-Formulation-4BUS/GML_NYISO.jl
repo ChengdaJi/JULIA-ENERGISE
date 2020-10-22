@@ -47,31 +47,9 @@ function GML_solver(date, current_time, B_inp, raw_data)
     NoBus = length(bus_struct.baseKV)
 
 
-    B_cap = 0;
 
-    if current_time == 1
-        P_rsrv_feedback = [];
-        B_feedback=zeros(NoShunt, 1);
-        # B_feedback[2,1] = B_inp[2,1];
-        # B_feedback[4,1] = B_inp[1,1];
-        # B_feedback[5,1] = B_inp[3,1];
-    else
-        # B_feedback = read_B_out(current_time-1)
-        B_feedback=zeros(NoShunt, 1);
 
-        # B_feedback[2,1] = B_inp[2,1];
-        # B_feedback[4,1] = B_inp[1,1];
-        # B_feedback[5,1] = B_inp[3,1];
 
-        if ancillary_type == "10min" || ancillary_type == "30min"
-            P_rsrv_feedback = read_RSRV_out()
-            # P_rsrv_feedback = zeros(1, current_time-1)
-        else
-            P_rsrv_feedback = zeros(1, current_time-1)
-        end
-    end
-
-    feedback = (B_feedback=(B_feedback), P_rsrv_feedback=(P_rsrv_feedback));
 
 
 
@@ -139,80 +117,130 @@ function GML_solver(date, current_time, B_inp, raw_data)
                 for shunt in bus_shunt_list);
         end
     end
-    println(sum(Pd_bus))
-    println(Pd_bus)
-    println(Qd_bus)
+
     reference_points = reference_point(sum(Pd_bus), Pd_bus, Qd_bus);
     println(string("Pg star", reference_points.P_gen))
     println(string("Qg star", reference_points.Q_gen))
     println(string("v star", reference_points.v_magnitude))
-    println(string("Pg star", reference_points.v_polar))
+    println(string("theta star", reference_points.v_polar))
     # return reference_points
-    # #
-    #
-    #
+
+    B_cap = 0;
+
     obj = GML_Sys_Ava_NYISO(T, pd, ancillary_type, B_cap, icdf, shunt_struct,
         bus_struct, branch_struct, gen_struct, baseMVA);
 
-    ############ write B and P_rsrv_feedback
+        if current_time == 1
+            P_rsrv_feedback = [];
+            # B_feedback=zeros(NoShunt, 1);
+            B_feedback = obj.B_max;
+            B_feedback = [3.0; 10.2; 12.0; 4.8]/2;
+            # B_feedback = [0; 0; 0; 0];
+            # B_feedback[2,1] = B_inp[2,1];
+            # B_feedback[4,1] = B_inp[1,1];
+            # B_feedback[5,1] = B_inp[3,1];
+        else
+            B_feedback = read_B_out(current_time-1)
+            # B_feedback=zeros(NoShunt, 1);
+
+            # B_feedback[2,1] = B_inp[2,1];
+            # B_feedback[4,1] = B_inp[1,1];
+            # B_feedback[5,1] = B_inp[3,1];
+
+            if ancillary_type == "10min" || ancillary_type == "30min"
+                P_rsrv_feedback = read_RSRV_out()
+                # P_rsrv_feedback = zeros(1, current_time-1)
+            else
+                P_rsrv_feedback = zeros(1, current_time-1)
+            end
+        end
+
+        feedback = (B_feedback=(B_feedback), P_rsrv_feedback=(P_rsrv_feedback));
+
+
 
     val_opt = optimal_NYISO(SN, current_time, obj, ancillary_type, baseMVA,
         feedback, pd, pg, price, shunt_struct, bus_struct, branch_struct, gen_struct,
         reference_points);
+    P_gen_real = val_opt.P_gen;
+    Q_gen_real = val_opt.Q_gen;
+    voltage_real = val_opt.v;
+    theta_real = val_opt.theta;
 
-        B_feedback_out=zeros(NoShunt,1)
-        for shunt = 1:NoShunt
-            B_feedback_out[shunt, 1] = val_opt.B[shunt,1] -
-                floor(val_opt.R[shunt,1]/12*baseMVA*1000)/1000;
-        end
-        write_B_out(current_time, B_feedback_out)
-           # println(val_opt.P_rsrv)
-        if ancillary_type == "10min" || ancillary_type == "30min"
-            if val_opt.P_rsrv <= 0.001
-                P_rsrv_feed = 0.0;
-            else
-                P_rsrv_feed = floor(val_opt.P_rsrv*1000)/1000
-            end
+    ############ write B and P_rsrv_feedback
 
-            if current_time == 1
-                P_rsrv_feedback_temp = [P_rsrv_feed]
-            else
-                # println(size(P_rsrv_feedback))
-                P_rsrv_feedback_temp = hcat(P_rsrv_feedback, P_rsrv_feed)
-                # push!(P_rsrv_feedback,val_opt.P_rsrv)
-            end
-            write_RSRV_out(P_rsrv_feedback_temp)
+   #  B_feedback_out=zeros(NoShunt,1)
+   #  for shunt = 1:NoShunt
+   #      B_feedback_out[shunt, 1] = val_opt.B[shunt,1] -
+   #          floor(val_opt.R[shunt,1]/12*baseMVA*1000)/1000;
+   #  end
+   #  write_B_out(current_time, B_feedback_out)
+   #     # println(val_opt.P_rsrv)
+   #  if ancillary_type == "10min" || ancillary_type == "30min"
+   #      if val_opt.P_rsrv <= 0.001
+   #          P_rsrv_feed = 0.0;
+   #      else
+   #          P_rsrv_feed = floor(val_opt.P_rsrv*1000)/1000
+   #      end
+   #
+   #      if current_time == 1
+   #          P_rsrv_feedback_temp = [P_rsrv_feed]
+   #      else
+   #          # println(size(P_rsrv_feedback))
+   #          P_rsrv_feedback_temp = hcat(P_rsrv_feedback, P_rsrv_feed)
+   #          # push!(P_rsrv_feedback,val_opt.P_rsrv)
+   #      end
+   #      write_RSRV_out(P_rsrv_feedback_temp)
+   # end
+
+    # Third layer
+
+
+   Pd_bus_real = zeros(NoBus,1)
+   Qd_bus_real = zeros(NoBus,1)
+
+   for bus=1:NoBus
+       bus_shunt_list = findall(id->id==bus, shunt_struct.find_bus[:,1]);
+       if ~isempty(bus_shunt_list)
+
+           Pd_bus_real[bus,1] = sum(
+               pd.ct[Int(shunt),1]
+               -(pg.mu_ct[Int(shunt),1]-val_opt.P_cul[Int(shunt),1])
+               -val_opt.R[Int(shunt),1]
+               for shunt in bus_shunt_list);
+
+           Qd_bus_real[bus,1] = sum(pd.qd_ct[Int(shunt),1]-val_opt.Qg[Int(shunt),1]
+               for shunt in bus_shunt_list);
        end
+   end
+
+   val_rp = reference_point(sum(Pd_bus), Pd_bus_real, Qd_bus_real);
+
+   println("=================result compare")
+
+   println(string("star real generation", val_rp.P_gen))
+   println(string("real generation", P_gen_real))
+
+   println(string("star reactive generation", val_rp.Q_gen))
+   println(string("reactive generation", Q_gen_real))
+
+   println(string("star voltage", val_rp.v_magnitude))
+   println(string("voltage", voltage_real))
+
+   println(string("star phase angle", val_rp.v_polar))
+   println(string("phase angle", theta_real))
 
 
-       Pd_bus_real = zeros(NoBus,1)
-       Qd_bus_real = zeros(NoBus,1)
 
-       for bus=1:NoBus
-           bus_shunt_list = findall(id->id==bus, shunt_struct.find_bus[:,1]);
-           if ~isempty(bus_shunt_list)
-
-               Pd_bus_real[bus,1] = sum(
-                   pd.ct[Int(shunt),1]-pg.mu_ct[Int(shunt),1]
-                   -val_opt.R[Int(shunt),1]
-                   for shunt in bus_shunt_list);
-
-               Qd_bus_real[bus,1] = sum(pd.qd_ct[Int(shunt),1]-val_opt.Qg[Int(shunt),1]
-                   for shunt in bus_shunt_list);
-           end
-       end
-
-       val_rp = reference_point(sum(Pd_bus), Pd_bus_real, Qd_bus_real);
-
-       # filename = string("midnight_Q=",p_rate,".csv")
-       # write_4bus_out(val_opt.P_gen, val_opt.Q_gen,
-       #     val_opt.v, val_opt.theta, val_rp, filename)
-       #
-       # mkpath("./result")
-       # write_output_out_2(val_opt, 0, val_rp, price, Pd_bus_real,
-       #     string("./result/Time", current_time, ".csv"));
-       # write_v_bus_out(current_time, val_opt);
-       return val_opt
+   # filename = string("midnight_Q=",p_rate,".csv")
+   # write_4bus_out(val_opt.P_gen, val_opt.Q_gen,
+   #     val_opt.v, val_opt.theta, val_rp, filename)
+   #
+   # mkpath("./result")
+   # write_output_out_2(val_opt, 0, val_rp, price, Pd_bus_real,
+   #     string("./result/Time", current_time, ".csv"));
+   # write_v_bus_out(current_time, val_opt);
+   return val_opt
 end
 
 
@@ -345,11 +373,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     NoBr = length(branch_struct.fbus)
     NoGen = length(gen_struct.Pmax)
     bus_switch_shunt=shunt_struct.bus_switch_shunt;
-    # NoGen=length(gen_data.id)
 
-    # m = Model(with_optimizer(Mosek.Optimizer, QUIET=true,
-    # MSK_DPAR_INTPNT_CO_TOL_REL_GAP=1e-3,
-    # MSK_DPAR_INTPNT_CO_TOL_MU_RED=1e-3))
     m = Model(Mosek.Optimizer)
     set_optimizer_attribute(m, "QUIET", true)
     # define the real-time variables
@@ -571,30 +595,6 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     # Gen Level
     @variable(m, 1000>=P_gen[1:SN, 1:NoGen, 1:T-1]>=-1000)
     @variable(m, 1000>=Q_gen[1:SN, 1:NoGen, 1:T-1]>=-1000)
-
-    # @variable(m, Pg[1:SN, shunt = 1:NoShunt, t=1:T-1] == 0); # the real power output
-    # @variable(m, Qg[1:SN, shunt = 1:NoShunt, 1:T-1] == 0); # the real power output
-    #
-    # @variable(m, B[1:SN, shunt=1:NoShunt, t=1:T-1] == 0); # the storage
-    # @variable(m, R[1:SN, shunt=1:NoShunt, t=1:T-1] ==0);# the charge/discharge rate
-    #
-    # @variable(m,
-    #     P_shunt[1:SN, shunt=1:NoShunt, t=1:T-1] == 0)
-    # @variable(m, Q_shunt[1:SN, 1:NoShunt, 1:T-1]==-1000)
-    #
-    #
-    # @variable(m, P_bus[1:SN, 1:NoBus, 1:T-1]==-1000)
-    # @variable(m, Q_bus[1:SN, 1:NoBus, 1:T-1]==-1000)
-    # @variable(m, v[1:SN, 1:NoBus, 1:T-1]==0)
-    #
-    # # Branch level
-    # @variable(m, P_br[1:SN,1:NoBr, 1:T-1]==-1000)
-    # @variable(m, Q_br[1:SN,1:NoBr, 1:T-1]==-1000)
-    # @variable(m, l[1:SN,1:NoBr, 1:T-1]==0)
-    # # Gen Level
-    # @variable(m, P_gen[1:SN, 1:NoGen, 1:T-1]==-1000)
-    # @variable(m, Q_gen[1:SN, 1:NoGen, 1:T-1]==-1000)
-
     # #
     # # # for different scenario
     for scenario = 1:SN
@@ -611,10 +611,13 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                     @constraint(m, B[scenario,shunt,t] ==
                         B[scenario,shunt,t-1] - R[scenario,shunt,t-1]*baseMVA*delta_t)
                 end
-                if shunt_struct.type[shunt, 1]==1
+
+
+                if shunt_struct.type[shunt, 1]==1 # load shunt
 
                     @constraint(m,
-                        [pg.sg_max[shunt, 1], Pg[scenario, shunt,t], Qg[scenario, shunt,t] ]
+                        [pg.sg_max[shunt, 1], Pg[scenario, shunt,t],
+                        Qg[scenario, shunt,t] ]
                         in SecondOrderCone());
 
                     @constraint(m,  P_shunt[scenario,shunt,t]==
@@ -638,19 +641,10 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
 
                 end
             end
+
             for bus=1:NoBus
                 # id of shunts that belong to that bus
                 bus_shunt_list = findall(id->id==bus, shunt_struct.find_bus[:,1]);
-
-
-
-                # if bus == 70
-                #     @constraint(m,
-                #         1.03569^2 == v[scenario,bus,t]);
-                # else
-                #     @constraint(m, V_min^2<= v[scenario,bus,t]);
-                #     @constraint(m, v[scenario,bus,t]<= V_max^2);
-                # end
 
                 if bus_struct.type[bus] == 1 # PQ bus
 
@@ -738,7 +732,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
         end
     end
     #
-    #
+    # Reserve Constraint
     if ancillary_type == "10min" || ancillary_type == "30min"
             # println(Real_Bus_list)
             # RT
@@ -779,14 +773,8 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
             # end
 
             @constraint(m, B_rsrv_rt <= sum(B_rt))
-            # println(sum(B_feedback[bus, 1] for bus in Non_affected_Bus_list))
-            # @constraint(m, B_rsrv_rt <=
-            #     sum(B_rt[bus, 1] for bus in Non_affected_Bus_list))
-            # @constraint(m, B_rsrv_rt <= 4)
-            # Scenario
             @variable(m, P_rsrv[1:SN,1:T-1])
             @variable(m, B_rsrv[1:SN,1:T-1])
-            # @constraint(m, P_rsrv==3)
 
             for scenario=1:SN
                 for t_real=current_time+1:current_time+T-1
@@ -919,6 +907,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
         end
     # #
 
+    # Identify the type of objective function
     if ancillary_type == "10min" || ancillary_type == "30min"
         @objective(m, Min,
             fn_cost_RHC_anc(delta_t, P_gen, P_gen_rt, Pg_rt,Pg, P_rsrv_rt,
@@ -930,7 +919,8 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
                 pg, pd, beta, SN, obj, gen_struct, bus_struct,
                 branch_struct, peak_withdraw, baseMVA))
     end
-    #
+
+    # Optimizing
     status=optimize!(m);
     println(string("    ----", termination_status(m)))
     terminate_s = termination_status(m);
@@ -954,14 +944,15 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     ###############
     R_rt_o=JuMP.value.(R_rt)
     println(string("    ----current battery disharge: ", sum(R_rt_o)))
+    println(R_rt_o)
 
     ###############
     v_rt_o=JuMP.value.(v_rt)
-    println(string("    ----current voltage: ", v_rt_o))
+    # println(string("    ----current voltage: ", v_rt_o))
 
     ################
     B_rt_o=JuMP.value.(B_rt)
-    # B_o=JuMP.value.(B)
+    B_o=JuMP.value.(B)
     # B_traj = hcat(B_rt_o, B_o[scenario_of_interest,:,:])
     ###############
     Pg_rt_o=JuMP.value.(Pg_rt)
@@ -1018,7 +1009,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
 
     println(string("    ----current star generation: ",
         sum(reference_points.P_gen)))
-    println(string("    ----current real generation: ",P_gen_rt_o))
+    # println(string("    ----current real generation: ",P_gen_rt_o))
 
 
     ############
@@ -1030,40 +1021,22 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     Q_gen_sum_ct = sum(Q_gen_rt_o[gen, 1] for gen in 1:NoGen)
     println(string("    ----current reactive generation: ",
         sum(Q_gen_sum_ct)))
-    println(string("    ----current reactive generation: ",Q_gen_rt_o))
+    # println(string("    ----current reactive generation: ",Q_gen_rt_o))
     ############
     peak_withdraw_o = JuMP.value.(peak_withdraw);
     ###########
     theta_rt_o = JuMP.value.(theta_rt);
-    println(string("    ----phase angle: ",
-        theta_rt_o))
-    # println("print voltage constraint")
-    # for branch =15:16
-    #     fbus = branch_struct.fbus[branch];
-    #     tbus = branch_struct.tbus[branch];
-    #     println(v_rt_o[fbus]-v_rt_o[tbus])
-    #     # println(v_rt_o[fbus]-v_rt_o[tbus]-
-    #     #     2*(r[branch]*P_br_rt_o[branch,1]))
-    # end
-    # for t=1:287
-    #     for branch =15:16
-    #         fbus = Int(branch_struct.fbus[branch]);
-    #         tbus = Int(branch_struct.tbus[branch]);
-    #         println(v_o[1,fbus,t]-v_o[1,tbus,t])
-    #         # println(v_o[1,fbus,t]-v_o[1,tbus,t]-
-    #         #     2*(r[branch]*P_br_o[1,branch,t]
-    #         #     ))
-    #     end
-    # end
 
     ############
     if ancillary_type == "10min" || ancillary_type == "30min"
         P_rsrv_rt_o=JuMP.value(P_rsrv_rt);
         P_rsrv_s=JuMP.value.(P_rsrv);
-        P_rsrv_total = hcat(P_rsrv_rt_o[1,1], reshape(P_rsrv_s[scenario_of_interest,:], 1, 287));
+        P_rsrv_total = hcat(P_rsrv_rt_o[1,1],
+            reshape(P_rsrv_s[scenario_of_interest,:], 1, 287));
         B_rsrv_rt_o=JuMP.value(B_rsrv_rt);
         B_rsrv_s=JuMP.value.(B_rsrv);
-        B_rsrv_total = hcat(B_rsrv_rt_o[1,1], reshape(B_rsrv_s[scenario_of_interest,:], 1, 287));
+        B_rsrv_total = hcat(B_rsrv_rt_o[1,1],
+            reshape(B_rsrv_s[scenario_of_interest,:], 1, 287));
     else
         P_rsrv_rt_o = 0;
         P_rsrv_total = zeros(1,T);
@@ -1097,7 +1070,7 @@ function optimal_NYISO(SN, t, obj, ancillary_type, baseMVA,
     val_opt = (R=(R_rt_o), B=(B_rt_o), Pg=(Pg_rt_o), Qg=(Qg_rt_o),
         P_gen=(P_gen_rt_o), Q_gen=(Q_gen_rt_o),
         P_bus=(P_bus_rt_o), Q_bus=(Q_bus_rt_o),
-        v=(v_rt_o), theta_rt = (theta_rt_o),
+        v=(v_rt_o), theta = (theta_rt_o),
         time_solve=(time_solve), P_cul=(P_cul));
 
 
@@ -1150,8 +1123,8 @@ function fn_cost_RHC_rt(delta_t, P_gen, P_gen_rt, Pg_rt, Pg, price,
 
     Cost_peakshaving = 0;
 
-    Final_cost = (Cost_P_gen_sum_ct
-        +Cost_Pg_ct_diff
+    Final_cost = (Cost_P_gen_sum_ct+Cost_P_gen_sum_scenario
+        +Cost_Pg_ct_diff+Cost_Pg_scenario_diff
         +Cost_peakshaving)
     return Final_cost
 end
@@ -1589,7 +1562,6 @@ function reference_point(Pd_sum, Pd_bus, Qd_bus)
 
     #  this is for PV bus
     P_Percent = [0.636, 0.364];
-    println(Pd_sum)
     for (gen_name, gen_data) in network_data["gen"]
         gen_id = parse(Int64, gen_name);
         gen_data["pg"] = Pd_sum*P_Percent[gen_id];
