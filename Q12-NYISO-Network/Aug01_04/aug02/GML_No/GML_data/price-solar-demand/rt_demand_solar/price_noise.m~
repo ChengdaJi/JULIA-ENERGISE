@@ -1,0 +1,8 @@
+for day = 1:1
+    for time = 1:1
+        outputname = strcat('price_noise/price_noise_aug0',...
+             num2str(day),'_time',num2str(time),'.mat')
+        
+        save(outputname, 'x')
+    end
+end

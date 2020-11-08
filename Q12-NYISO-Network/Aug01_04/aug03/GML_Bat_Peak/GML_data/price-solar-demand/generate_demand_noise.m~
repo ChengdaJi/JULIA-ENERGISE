@@ -1,0 +1,26 @@
+% demand = load('normalized_demand.mat','normalized_demand');
+% pd=demand.normalized_demand;
+% sum(pd,1)
+% figure(1)
+% plot(1:576,pd(:,1))
+% % hold on 
+% plot(1:576,pd(:,2));
+
+demand_noise = load('demand_noise.mat');
+a = demand_noise.demand_noise{1}
+
+for day = 1:4
+    for time = 1:288
+        price_noise = zeros(24,240);
+        outputname = strcat('price_noise/price_noise_aug0',...
+             num2str(day),'_time',num2str(time),'.mat')
+        
+        predict_time = 1;
+        for predict_std = 1:9/23:10
+            price_noise(predict_time,:)=...
+                randn(1,240)*predict_std;
+            predict_time = predict_time+1;
+        end
+        save(outputname, 'price_noise')
+    end
+end

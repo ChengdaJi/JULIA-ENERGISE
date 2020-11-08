@@ -1,0 +1,2 @@
+cost,time,Pg,B,R,Pd,P0,P_rsrv,P_cul,status,cost_opt,peak_opt
+12541.840723103554,2.86,0.0,0.0,0.0,0.0,7.487666103345406,0,0.0,OPTIMAL,467482.982427643,0.0
